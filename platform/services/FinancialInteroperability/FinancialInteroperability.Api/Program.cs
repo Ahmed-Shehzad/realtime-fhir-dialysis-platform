@@ -40,7 +40,6 @@ _ = builder.Services.AddScoped<IPatientCoverageRegistrationRepository, PatientCo
 _ = builder.Services.AddScoped<ICoverageEligibilityInquiryRepository, CoverageEligibilityInquiryRepository>();
 _ = builder.Services.AddScoped<IDialysisFinancialClaimRepository, DialysisFinancialClaimRepository>();
 _ = builder.Services.AddScoped<IExplanationOfBenefitRecordRepository, ExplanationOfBenefitRecordRepository>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 _ = builder.Services.AddIntercessor(cfg =>
     cfg.RegisterFromAssembly(typeof(RecordPatientCoverageCommand).Assembly));
@@ -61,7 +60,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();

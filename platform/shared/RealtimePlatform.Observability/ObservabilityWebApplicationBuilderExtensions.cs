@@ -1,6 +1,7 @@
 using System.Reflection;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using OpenTelemetry.Metrics;
@@ -16,6 +17,14 @@ namespace RealtimePlatform.Observability;
 /// </summary>
 public static class ObservabilityWebApplicationBuilderExtensions
 {
+    private static bool HasOtlpTraceExporter(IConfiguration configuration) =>
+        !string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"])
+        || !string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"]);
+
+    private static bool HasOtlpMetricsExporter(IConfiguration configuration) =>
+        !string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"])
+        || !string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"]);
+
     /// <summary>
     /// Adds standard platform observability. Call early in host setup.
     /// </summary>
@@ -37,6 +46,10 @@ public static class ObservabilityWebApplicationBuilderExtensions
                 .ReadFrom.Services(services)
                 .Enrich.With(new OpenTelemetryTraceContextEnricher()));
 
+        IConfiguration configuration = builder.Configuration;
+        bool traceOtlp = HasOtlpTraceExporter(configuration);
+        bool metricsOtlp = HasOtlpMetricsExporter(configuration);
+
         _ = builder.Services.AddOpenTelemetry()
             .ConfigureResource(r => r
                 .AddService(serviceName, serviceVersion: serviceVersion)
@@ -44,15 +57,20 @@ public static class ObservabilityWebApplicationBuilderExtensions
                 [
                     new KeyValuePair<string, object>("deployment.environment", deploymentEnvironment),
                 ]))
-            .WithTracing(t => t
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddOtlpExporter())
-            .WithMetrics(m => m
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddRuntimeInstrumentation()
-                .AddOtlpExporter());
+            .WithTracing(t =>
+            {
+                _ = t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation();
+                if (traceOtlp)
+                    _ = t.AddOtlpExporter();
+            })
+            .WithMetrics(m =>
+            {
+                _ = m.AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation();
+                if (metricsOtlp)
+                    _ = m.AddOtlpExporter();
+            });
 
         return builder;
     }

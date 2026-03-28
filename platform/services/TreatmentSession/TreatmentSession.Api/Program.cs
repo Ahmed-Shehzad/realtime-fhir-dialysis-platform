@@ -37,8 +37,6 @@ string connectionString = builder.Configuration.GetConnectionString("Default")
 _ = builder.Services.AddNpgsqlBoundedContext<TreatmentSessionDbContext>(connectionString);
 
 _ = builder.Services.AddScoped<ISessionRepository, SessionRepository>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 _ = builder.Services.AddIntercessor(cfg =>
 {
     cfg.RegisterFromAssembly(typeof(CreateDialysisSessionCommand).Assembly);
@@ -60,7 +58,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();

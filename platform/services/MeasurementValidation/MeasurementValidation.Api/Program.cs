@@ -37,7 +37,6 @@ string connectionString = builder.Configuration.GetConnectionString("Default")
 _ = builder.Services.AddNpgsqlBoundedContext<MeasurementValidationDbContext>(connectionString);
 
 _ = builder.Services.AddScoped<IMeasurementValidationRepository, MeasurementValidationRepository>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 _ = builder.Services.AddIntercessor(cfg =>
     cfg.RegisterFromAssembly(typeof(ValidateMeasurementCommand).Assembly));
@@ -58,7 +57,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();

@@ -2,7 +2,21 @@ using RealtimePlatform.AppHost;
 
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
-IResourceBuilder<PostgresServerResource> postgres = builder.AddPostgres("postgres").WithDataVolume();
+// In-cluster Host=DevPostgresInClusterHost (Aspire DNS). From the host OS use Host=localhost;Port=DevPostgresPublishedPort.
+const string devPostgresInClusterHost = "postgres";
+const string devPostgresUser = "postgres";
+const string devPostgresPassword = "postgres";
+const int devPostgresPublishedPort = 5432;
+
+IResourceBuilder<ParameterResource> postgresUser = builder.AddParameter("postgres-user", devPostgresUser);
+IResourceBuilder<ParameterResource> postgresPassword = builder.AddParameter(
+    "postgres-password", devPostgresPassword, secret: true);
+
+// PGDATA is initialized once per Docker volume; POSTGRES_PASSWORD is not reapplied on later runs.
+// If "password authentication failed for user postgres", remove the volume or bump its name after credential changes.
+IResourceBuilder<PostgresServerResource> postgres = builder
+    .AddPostgres(devPostgresInClusterHost, postgresUser, postgresPassword, devPostgresPublishedPort)
+    .WithDataVolume(name: "realtime-fhir-dialysis-postgres-data");
 
 static IResourceBuilder<PostgresDatabaseResource> DevDb(
     IResourceBuilder<PostgresServerResource> pg,
@@ -58,7 +72,8 @@ IResourceBuilder<ProjectResource> deviceRegistry =
         .WithHttpEndpoint(port: 5001, targetPort: 5001, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbDeviceRegistry, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbDeviceRegistry)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> measurementAcquisition =
     builder.AddProject<Projects.MeasurementAcquisition_Api>(
             "measurement-acquisition",
@@ -66,7 +81,8 @@ IResourceBuilder<ProjectResource> measurementAcquisition =
         .WithHttpEndpoint(port: 5002, targetPort: 5002, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbMeasurementAcquisition, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbMeasurementAcquisition)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> treatmentSession =
     builder.AddProject<Projects.TreatmentSession_Api>(
             "treatment-session",
@@ -74,7 +90,8 @@ IResourceBuilder<ProjectResource> treatmentSession =
         .WithHttpEndpoint(port: 5003, targetPort: 5003, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbTreatmentSession, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbTreatmentSession)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> auditProvenance =
     builder.AddProject<Projects.AuditProvenance_Api>(
             "audit-provenance",
@@ -82,7 +99,8 @@ IResourceBuilder<ProjectResource> auditProvenance =
         .WithHttpEndpoint(port: 5004, targetPort: 5004, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbAuditProvenance, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbAuditProvenance)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> measurementValidation =
     builder.AddProject<Projects.MeasurementValidation_Api>(
             "measurement-validation",
@@ -90,7 +108,8 @@ IResourceBuilder<ProjectResource> measurementValidation =
         .WithHttpEndpoint(port: 5005, targetPort: 5005, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbMeasurementValidation, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbMeasurementValidation)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> signalConditioning =
     builder.AddProject<Projects.SignalConditioning_Api>(
             "signal-conditioning",
@@ -98,7 +117,8 @@ IResourceBuilder<ProjectResource> signalConditioning =
         .WithHttpEndpoint(port: 5006, targetPort: 5006, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbSignalConditioning, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbSignalConditioning)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> terminologyConformance =
     builder.AddProject<Projects.TerminologyConformance_Api>(
             "terminology-conformance",
@@ -106,7 +126,8 @@ IResourceBuilder<ProjectResource> terminologyConformance =
         .WithHttpEndpoint(port: 5007, targetPort: 5007, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbTerminologyConformance, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbTerminologyConformance)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> clinicalInteroperability =
     builder.AddProject<Projects.ClinicalInteroperability_Api>(
             "clinical-interoperability",
@@ -114,7 +135,8 @@ IResourceBuilder<ProjectResource> clinicalInteroperability =
         .WithHttpEndpoint(port: 5008, targetPort: 5008, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbClinicalInteroperability, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbClinicalInteroperability)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> financialInteroperability =
     builder.AddProject<Projects.FinancialInteroperability_Api>(
             "financial-interoperability",
@@ -122,7 +144,8 @@ IResourceBuilder<ProjectResource> financialInteroperability =
         .WithHttpEndpoint(port: 5017, targetPort: 5017, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbFinancialInteroperability, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbFinancialInteroperability)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> queryReadModel =
     builder.AddProject<Projects.QueryReadModel_Api>(
             "query-read-model",
@@ -130,7 +153,8 @@ IResourceBuilder<ProjectResource> queryReadModel =
         .WithHttpEndpoint(port: 5009, targetPort: 5009, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbQueryReadModel, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbQueryReadModel)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> realtimeSurveillance =
     builder.AddProject<Projects.RealtimeSurveillance_Api>(
             "realtime-surveillance",
@@ -138,14 +162,15 @@ IResourceBuilder<ProjectResource> realtimeSurveillance =
         .WithHttpEndpoint(port: 5010, targetPort: 5010, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbRealtimeSurveillance, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbRealtimeSurveillance)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> realtimeDelivery =
     builder.AddProject<Projects.RealtimeDelivery_Api>(
             "realtime-delivery",
             ConfigureProjectForExplicitAspireHttp)
         .WithHttpEndpoint(port: 5011, targetPort: 5011, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
-        .WaitFor(postgres);
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> clinicalAnalytics =
     builder.AddProject<Projects.ClinicalAnalytics_Api>(
             "clinical-analytics",
@@ -153,7 +178,8 @@ IResourceBuilder<ProjectResource> clinicalAnalytics =
         .WithHttpEndpoint(port: 5012, targetPort: 5012, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbClinicalAnalytics, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbClinicalAnalytics)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> reporting =
     builder.AddProject<Projects.Reporting_Api>(
             "reporting",
@@ -161,7 +187,8 @@ IResourceBuilder<ProjectResource> reporting =
         .WithHttpEndpoint(port: 5013, targetPort: 5013, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbReporting, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbReporting)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> workflowOrchestrator =
     builder.AddProject<Projects.WorkflowOrchestrator_Api>(
             "workflow-orchestrator",
@@ -169,7 +196,8 @@ IResourceBuilder<ProjectResource> workflowOrchestrator =
         .WithHttpEndpoint(port: 5014, targetPort: 5014, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbWorkflowOrchestrator, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbWorkflowOrchestrator)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> replayRecovery =
     builder.AddProject<Projects.ReplayRecovery_Api>(
             "replay-recovery",
@@ -177,7 +205,8 @@ IResourceBuilder<ProjectResource> replayRecovery =
         .WithHttpEndpoint(port: 5015, targetPort: 5015, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbReplayRecovery, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbReplayRecovery)
+        .WithAspireReadinessProbe();
 IResourceBuilder<ProjectResource> administrationConfiguration =
     builder.AddProject<Projects.AdministrationConfiguration_Api>(
             "administration-configuration",
@@ -185,7 +214,8 @@ IResourceBuilder<ProjectResource> administrationConfiguration =
         .WithHttpEndpoint(port: 5016, targetPort: 5016, isProxied: false)
         .WithAspNetCoreDevelopmentEnvironment()
         .WithReference(dbAdministrationConfiguration, defaultConnection)
-        .WaitFor(postgres);
+        .WaitFor(dbAdministrationConfiguration)
+        .WithAspireReadinessProbe();
 
 // Environment variables override appsettings.Development.json localhost YARP targets so logical
 // host names resolve via Microsoft.Extensions.ServiceDiscovery.Yarp under the AppHost.
@@ -262,7 +292,6 @@ _ = builder.AddProject<Projects.RealtimePlatform_ApiGateway>(
         "http://financial-interoperability/")
     .WithHttpEndpoint(port: 5100, targetPort: 5100, isProxied: false)
     .WithAspNetCoreDevelopmentEnvironment()
-    .WaitFor(postgres)
     .WaitFor(deviceRegistry)
     .WaitFor(measurementAcquisition)
     .WaitFor(treatmentSession)
@@ -279,6 +308,7 @@ _ = builder.AddProject<Projects.RealtimePlatform_ApiGateway>(
     .WaitFor(reporting)
     .WaitFor(workflowOrchestrator)
     .WaitFor(replayRecovery)
-    .WaitFor(administrationConfiguration);
+    .WaitFor(administrationConfiguration)
+    .WithAspireReadinessProbe();
 
 await builder.Build().RunAsync().ConfigureAwait(false);

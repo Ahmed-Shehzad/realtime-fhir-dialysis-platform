@@ -37,8 +37,6 @@ string connectionString = builder.Configuration.GetConnectionString("Default")
 _ = builder.Services.AddNpgsqlBoundedContext<SignalConditioningDbContext>(connectionString);
 
 _ = builder.Services.AddScoped<IConditioningResultRepository, ConditioningResultRepository>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 _ = builder.Services.AddIntercessor(cfg =>
     cfg.RegisterFromAssembly(typeof(ConditionSignalCommand).Assembly));
 
@@ -58,7 +56,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();

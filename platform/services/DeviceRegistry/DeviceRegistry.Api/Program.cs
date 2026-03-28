@@ -38,8 +38,6 @@ string connectionString = builder.Configuration.GetConnectionString("Default")
 _ = builder.Services.AddNpgsqlBoundedContext<DeviceRegistryDbContext>(connectionString);
 
 _ = builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 _ = builder.Services.AddScoped<ITrustLookup, TrustLookupService>();
 
 _ = builder.Services.AddIntercessor(cfg =>
@@ -63,7 +61,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();

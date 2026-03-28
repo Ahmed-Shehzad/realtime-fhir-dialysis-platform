@@ -36,10 +36,11 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        if (app.Environment.IsDevelopment())
-            _ = app.MapHealthChecks(
+        // Always exposed so Aspire/DCP and load balancers can probe without JWT; matches /health readiness split in Aspire docs.
+        _ = app.MapHealthChecks(
                 AlivenessEndpointPath,
-                new HealthCheckOptions { Predicate = static r => r.Tags.Contains("live") });
+                new HealthCheckOptions { Predicate = static r => r.Tags.Contains("live") })
+            .AllowAnonymous();
 
         return app;
     }

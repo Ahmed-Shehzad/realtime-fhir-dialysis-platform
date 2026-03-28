@@ -1,3 +1,4 @@
+using BuildingBlocks.Abstractions;
 using BuildingBlocks.Interceptors;
 
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,7 @@ public static class EfCoreBoundedContextServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         _ = services.AddNpgsqlDbContextWithOutboxInterceptors<TDbContext>(connectionString);
+        _ = services.AddScoped<IUnitOfWork>(static sp => new global::BuildingBlocks.UnitOfWork(sp.GetRequiredService<TDbContext>()));
         return services;
     }
 }

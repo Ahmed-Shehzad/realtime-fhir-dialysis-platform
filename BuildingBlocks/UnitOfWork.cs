@@ -8,7 +8,7 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly DbContext _context;
 
-    protected UnitOfWork(DbContext context)
+    public UnitOfWork(DbContext context)
     {
         _context = context;
     }

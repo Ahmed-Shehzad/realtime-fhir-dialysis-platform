@@ -38,8 +38,6 @@ _ = builder.Services.AddNpgsqlBoundedContext<RealtimeSurveillanceDbContext>(conn
 
 _ = builder.Services.AddScoped<ISurveillanceAlertRepository, SurveillanceAlertRepository>();
 _ = builder.Services.AddScoped<ISessionRiskSnapshotRepository, SessionRiskSnapshotRepository>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 _ = builder.Services.AddIntercessor(cfg =>
     cfg.RegisterFromAssembly(typeof(RaiseSurveillanceAlertCommand).Assembly));
 
@@ -59,7 +57,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();

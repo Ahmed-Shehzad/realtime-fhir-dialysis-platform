@@ -40,8 +40,6 @@ _ = builder.Services.AddScoped<IFacilityConfigurationRepository, FacilityConfigu
 _ = builder.Services.AddScoped<IRuleSetRepository, RuleSetRepository>();
 _ = builder.Services.AddScoped<IThresholdProfileRepository, ThresholdProfileRepository>();
 _ = builder.Services.AddScoped<IFeatureToggleRepository, FeatureToggleRepository>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 _ = builder.Services.AddIntercessor(cfg =>
     cfg.RegisterFromAssembly(typeof(UpsertFacilityConfigurationCommand).Assembly));
 
@@ -61,7 +59,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();

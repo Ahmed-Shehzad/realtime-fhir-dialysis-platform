@@ -42,7 +42,6 @@ _ = builder.Services.AddScoped<IAlertProjectionRepository, AlertProjectionReposi
 _ = builder.Services.AddScoped<IReadModelRebuildRecordRepository, ReadModelRebuildRecordRepository>();
 _ = builder.Services.AddScoped<IDashboardReadModelQuery, DashboardReadModelQuery>();
 _ = builder.Services.AddScoped<IReadModelProjectionMaintenance, ReadModelProjectionMaintenance>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 _ = builder.Services.AddIntercessor(cfg =>
     cfg.RegisterFromAssembly(typeof(RebuildReadModelProjectionsCommand).Assembly));
@@ -63,7 +62,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();

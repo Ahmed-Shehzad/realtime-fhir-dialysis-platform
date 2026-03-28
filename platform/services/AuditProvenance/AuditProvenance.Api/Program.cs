@@ -38,8 +38,6 @@ _ = builder.Services.AddNpgsqlBoundedContext<AuditProvenanceDbContext>(connectio
 
 _ = builder.Services.AddScoped<IPlatformAuditFactRepository, PlatformAuditFactRepository>();
 _ = builder.Services.AddScoped<IProvenanceLinkRepository, ProvenanceLinkRepository>();
-_ = builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 _ = builder.Services.AddIntercessor(cfg =>
     cfg.RegisterFromAssembly(typeof(RecordPlatformAuditFactCommand).Assembly));
 
@@ -59,7 +57,7 @@ _ = builder.Services.AddControllers();
 _ = builder.Services.AddDialysisPlatformOpenApi();
 _ = builder.Services
     .AddHealthChecks()
-    .AddNpgSql(connectionString, name: "postgres")
+    .AddNpgsqlDefaultConnectionHealthCheck()
     .AddRealtimePlatformRedisHealthCheck(builder.Configuration);
 
 WebApplication app = builder.Build();
