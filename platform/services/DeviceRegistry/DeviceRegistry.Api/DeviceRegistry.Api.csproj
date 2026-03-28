@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DeviceRegistry.Api</RootNamespace>
+    <AssemblyName>DeviceRegistry.Api</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DeviceRegistry.Application\DeviceRegistry.Application.csproj" />
+    <ProjectReference Include="..\DeviceRegistry.Infrastructure\DeviceRegistry.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\BuildingBlocks\BuildingBlocks.csproj" />
+    <ProjectReference Include="..\..\..\..\Intercessor\Intercessor.csproj" />
+    <ProjectReference Include="..\..\..\..\platform\RealtimePlatform.ServiceDefaults\RealtimePlatform.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\..\..\platform\shared\RealtimePlatform.Observability\RealtimePlatform.Observability.csproj" />
+    <ProjectReference Include="..\..\..\..\platform\shared\RealtimePlatform.MassTransit\RealtimePlatform.MassTransit.csproj" />
+    <ProjectReference Include="..\..\..\..\platform\shared\RealtimePlatform.Redis\RealtimePlatform.Redis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DeviceRegistry.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

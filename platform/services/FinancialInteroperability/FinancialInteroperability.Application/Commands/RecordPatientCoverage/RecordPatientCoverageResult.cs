@@ -1,0 +1,3 @@
+namespace FinancialInteroperability.Application.Commands.RecordPatientCoverage;
+
+public sealed record RecordPatientCoverageResult(Ulid CoverageRegistrationId);

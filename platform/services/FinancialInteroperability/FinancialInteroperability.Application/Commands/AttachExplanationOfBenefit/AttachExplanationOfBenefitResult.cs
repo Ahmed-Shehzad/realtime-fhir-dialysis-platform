@@ -1,0 +1,3 @@
+namespace FinancialInteroperability.Application.Commands.AttachExplanationOfBenefit;
+
+public sealed record AttachExplanationOfBenefitResult(Ulid ExplanationOfBenefitRecordId, bool Created);

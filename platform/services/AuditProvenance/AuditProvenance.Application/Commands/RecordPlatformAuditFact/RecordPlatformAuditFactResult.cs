@@ -1,0 +1,3 @@
+namespace AuditProvenance.Application.Commands.RecordPlatformAuditFact;
+
+public sealed record RecordPlatformAuditFactResult(Ulid PlatformAuditFactId);

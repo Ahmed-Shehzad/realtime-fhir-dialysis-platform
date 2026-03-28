@@ -1,0 +1,30 @@
+---
+description: Mandatory Sonar S107 — max 7 method parameters (RSPEC-107).
+globs: "**/*.cs"
+alwaysApply: true
+---
+# S107 — Method should not have too many parameters (strict)
+
+**Specification:** [RSPEC-107](https://rules.sonarsource.com/csharp/RSPEC-107)  
+**Rule key (analyzer):** `csharpsquid:S107`
+
+## Enforcement
+
+This project **strictly** follows S107. Do not introduce or leave methods (including local functions and `delegate` signatures) with **more than seven parameters**.
+
+- When adding or changing C# code, **verify** parameter count before finishing.
+- If a legitimate design needs more inputs, **refactor first** using the patterns below — do not increase the Sonar threshold as a workaround.
+
+## Compliant refactors
+
+| Approach | Use when |
+|----------|----------|
+| **`record` / class / DTO** with `required` + optional init props | Factory methods, handlers, domain `Create`/`Register`/`Record` APIs |
+| **Options object** or **builder** | Many optional or configuration values |
+| **Split method** | Unrelated responsibilities bundled in one method |
+
+**Avoid:** positional `record` primary constructors with 8+ parameters — they violate S107 the same as ordinary methods.
+
+## Reviews
+
+Treat S107 like a build breaker: the same remediation applies when reviewing PRs and when the AI suggests code.

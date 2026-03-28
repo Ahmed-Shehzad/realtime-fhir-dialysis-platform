@@ -1,0 +1,164 @@
+<Solution>
+  <Folder Name="/platform/" />
+  <Folder Name="/platform/gateway/">
+    <Project Path="platform/gateway/RealtimePlatform.ApiGateway/RealtimePlatform.ApiGateway.csproj" />
+  </Folder>
+  <Folder Name="/platform/aspire/">
+    <Project Path="platform/RealtimePlatform.ServiceDefaults/RealtimePlatform.ServiceDefaults.csproj" />
+    <Project Path="platform/RealtimePlatform.AppHost/RealtimePlatform.AppHost.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/" />
+  <Folder Name="/platform/services/DeviceRegistry/">
+    <Project Path="platform/services/DeviceRegistry/DeviceRegistry.Api/DeviceRegistry.Api.csproj" />
+    <Project Path="platform/services/DeviceRegistry/DeviceRegistry.Application/DeviceRegistry.Application.csproj" />
+    <Project Path="platform/services/DeviceRegistry/DeviceRegistry.Domain/DeviceRegistry.Domain.csproj" />
+    <Project Path="platform/services/DeviceRegistry/DeviceRegistry.Infrastructure/DeviceRegistry.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/MeasurementAcquisition/">
+    <Project Path="platform/services/MeasurementAcquisition/MeasurementAcquisition.Api/MeasurementAcquisition.Api.csproj" />
+    <Project Path="platform/services/MeasurementAcquisition/MeasurementAcquisition.Application/MeasurementAcquisition.Application.csproj" />
+    <Project Path="platform/services/MeasurementAcquisition/MeasurementAcquisition.Domain/MeasurementAcquisition.Domain.csproj" />
+    <Project Path="platform/services/MeasurementAcquisition/MeasurementAcquisition.Infrastructure/MeasurementAcquisition.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/TreatmentSession/">
+    <Project Path="platform/services/TreatmentSession/TreatmentSession.Api/TreatmentSession.Api.csproj" />
+    <Project Path="platform/services/TreatmentSession/TreatmentSession.Application/TreatmentSession.Application.csproj" />
+    <Project Path="platform/services/TreatmentSession/TreatmentSession.Domain/TreatmentSession.Domain.csproj" />
+    <Project Path="platform/services/TreatmentSession/TreatmentSession.Infrastructure/TreatmentSession.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/AuditProvenance/">
+    <Project Path="platform/services/AuditProvenance/AuditProvenance.Api/AuditProvenance.Api.csproj" />
+    <Project Path="platform/services/AuditProvenance/AuditProvenance.Application/AuditProvenance.Application.csproj" />
+    <Project Path="platform/services/AuditProvenance/AuditProvenance.Domain/AuditProvenance.Domain.csproj" />
+    <Project Path="platform/services/AuditProvenance/AuditProvenance.Infrastructure/AuditProvenance.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/MeasurementValidation/">
+    <Project Path="platform/services/MeasurementValidation/MeasurementValidation.Api/MeasurementValidation.Api.csproj" />
+    <Project Path="platform/services/MeasurementValidation/MeasurementValidation.Application/MeasurementValidation.Application.csproj" />
+    <Project Path="platform/services/MeasurementValidation/MeasurementValidation.Domain/MeasurementValidation.Domain.csproj" />
+    <Project Path="platform/services/MeasurementValidation/MeasurementValidation.Infrastructure/MeasurementValidation.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/SignalConditioning/">
+    <Project Path="platform/services/SignalConditioning/SignalConditioning.Api/SignalConditioning.Api.csproj" />
+    <Project Path="platform/services/SignalConditioning/SignalConditioning.Application/SignalConditioning.Application.csproj" />
+    <Project Path="platform/services/SignalConditioning/SignalConditioning.Domain/SignalConditioning.Domain.csproj" />
+    <Project Path="platform/services/SignalConditioning/SignalConditioning.Infrastructure/SignalConditioning.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/TerminologyConformance/">
+    <Project Path="platform/services/TerminologyConformance/TerminologyConformance.Api/TerminologyConformance.Api.csproj" />
+    <Project Path="platform/services/TerminologyConformance/TerminologyConformance.Application/TerminologyConformance.Application.csproj" />
+    <Project Path="platform/services/TerminologyConformance/TerminologyConformance.Domain/TerminologyConformance.Domain.csproj" />
+    <Project Path="platform/services/TerminologyConformance/TerminologyConformance.Infrastructure/TerminologyConformance.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/ClinicalInteroperability/">
+    <Project Path="platform/services/ClinicalInteroperability/ClinicalInteroperability.Api/ClinicalInteroperability.Api.csproj" />
+    <Project Path="platform/services/ClinicalInteroperability/ClinicalInteroperability.Application/ClinicalInteroperability.Application.csproj" />
+    <Project Path="platform/services/ClinicalInteroperability/ClinicalInteroperability.Domain/ClinicalInteroperability.Domain.csproj" />
+    <Project Path="platform/services/ClinicalInteroperability/ClinicalInteroperability.Infrastructure/ClinicalInteroperability.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/FinancialInteroperability/">
+    <Project Path="platform/services/FinancialInteroperability/FinancialInteroperability.Api/FinancialInteroperability.Api.csproj" />
+    <Project Path="platform/services/FinancialInteroperability/FinancialInteroperability.Application/FinancialInteroperability.Application.csproj" />
+    <Project Path="platform/services/FinancialInteroperability/FinancialInteroperability.Domain/FinancialInteroperability.Domain.csproj" />
+    <Project Path="platform/services/FinancialInteroperability/FinancialInteroperability.Infrastructure/FinancialInteroperability.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/QueryReadModel/">
+    <Project Path="platform/services/QueryReadModel/QueryReadModel.Api/QueryReadModel.Api.csproj" />
+    <Project Path="platform/services/QueryReadModel/QueryReadModel.Application/QueryReadModel.Application.csproj" />
+    <Project Path="platform/services/QueryReadModel/QueryReadModel.Domain/QueryReadModel.Domain.csproj" />
+    <Project Path="platform/services/QueryReadModel/QueryReadModel.Infrastructure/QueryReadModel.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/RealtimeSurveillance/">
+    <Project Path="platform/services/RealtimeSurveillance/RealtimeSurveillance.Api/RealtimeSurveillance.Api.csproj" />
+    <Project Path="platform/services/RealtimeSurveillance/RealtimeSurveillance.Application/RealtimeSurveillance.Application.csproj" />
+    <Project Path="platform/services/RealtimeSurveillance/RealtimeSurveillance.Domain/RealtimeSurveillance.Domain.csproj" />
+    <Project Path="platform/services/RealtimeSurveillance/RealtimeSurveillance.Infrastructure/RealtimeSurveillance.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/RealtimeDelivery/">
+    <Project Path="platform/services/RealtimeDelivery/RealtimeDelivery.Api/RealtimeDelivery.Api.csproj" />
+    <Project Path="platform/services/RealtimeDelivery/RealtimeDelivery.Application/RealtimeDelivery.Application.csproj" />
+    <Project Path="platform/services/RealtimeDelivery/RealtimeDelivery.Domain/RealtimeDelivery.Domain.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/ClinicalAnalytics/">
+    <Project Path="platform/services/ClinicalAnalytics/ClinicalAnalytics.Api/ClinicalAnalytics.Api.csproj" />
+    <Project Path="platform/services/ClinicalAnalytics/ClinicalAnalytics.Application/ClinicalAnalytics.Application.csproj" />
+    <Project Path="platform/services/ClinicalAnalytics/ClinicalAnalytics.Domain/ClinicalAnalytics.Domain.csproj" />
+    <Project Path="platform/services/ClinicalAnalytics/ClinicalAnalytics.Infrastructure/ClinicalAnalytics.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/Reporting/">
+    <Project Path="platform/services/Reporting/Reporting.Api/Reporting.Api.csproj" />
+    <Project Path="platform/services/Reporting/Reporting.Application/Reporting.Application.csproj" />
+    <Project Path="platform/services/Reporting/Reporting.Domain/Reporting.Domain.csproj" />
+    <Project Path="platform/services/Reporting/Reporting.Infrastructure/Reporting.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/WorkflowOrchestrator/">
+    <Project Path="platform/services/WorkflowOrchestrator/WorkflowOrchestrator.Api/WorkflowOrchestrator.Api.csproj" />
+    <Project Path="platform/services/WorkflowOrchestrator/WorkflowOrchestrator.Application/WorkflowOrchestrator.Application.csproj" />
+    <Project Path="platform/services/WorkflowOrchestrator/WorkflowOrchestrator.Domain/WorkflowOrchestrator.Domain.csproj" />
+    <Project Path="platform/services/WorkflowOrchestrator/WorkflowOrchestrator.Infrastructure/WorkflowOrchestrator.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/ReplayRecovery/">
+    <Project Path="platform/services/ReplayRecovery/ReplayRecovery.Api/ReplayRecovery.Api.csproj" />
+    <Project Path="platform/services/ReplayRecovery/ReplayRecovery.Application/ReplayRecovery.Application.csproj" />
+    <Project Path="platform/services/ReplayRecovery/ReplayRecovery.Domain/ReplayRecovery.Domain.csproj" />
+    <Project Path="platform/services/ReplayRecovery/ReplayRecovery.Infrastructure/ReplayRecovery.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/services/AdministrationConfiguration/">
+    <Project Path="platform/services/AdministrationConfiguration/AdministrationConfiguration.Api/AdministrationConfiguration.Api.csproj" />
+    <Project Path="platform/services/AdministrationConfiguration/AdministrationConfiguration.Application/AdministrationConfiguration.Application.csproj" />
+    <Project Path="platform/services/AdministrationConfiguration/AdministrationConfiguration.Domain/AdministrationConfiguration.Domain.csproj" />
+    <Project Path="platform/services/AdministrationConfiguration/AdministrationConfiguration.Infrastructure/AdministrationConfiguration.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/platform/shared/">
+    <Project Path="platform/shared/RealtimePlatform.Redis/RealtimePlatform.Redis.csproj" />
+    <Project Path="platform/shared/RealtimePlatform.MassTransit/RealtimePlatform.MassTransit.csproj" />
+    <Project Path="platform/shared/RealtimePlatform.IntegrationEventCatalog/RealtimePlatform.IntegrationEventCatalog.csproj" />
+    <Project Path="platform/shared/RealtimePlatform.Messaging/RealtimePlatform.Messaging.csproj" />
+    <Project Path="platform/shared/RealtimePlatform.Observability/RealtimePlatform.Observability.csproj" />
+    <Project Path="platform/shared/RealtimePlatform.Persistence/RealtimePlatform.Persistence.csproj" />
+    <Project Path="platform/shared/RealtimePlatform.Workflow/RealtimePlatform.Workflow.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Simulation.GatewayCli/Simulation.GatewayCli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RealtimePlatform.UnitTesting/RealtimePlatform.UnitTesting.csproj" />
+    <Project Path="tests/DeviceRegistry.UnitTests/DeviceRegistry.UnitTests.csproj" />
+    <Project Path="tests/DeviceRegistry.IntegrationTests/DeviceRegistry.IntegrationTests.csproj" />
+    <Project Path="tests/MeasurementAcquisition.UnitTests/MeasurementAcquisition.UnitTests.csproj" />
+    <Project Path="tests/MeasurementAcquisition.IntegrationTests/MeasurementAcquisition.IntegrationTests.csproj" />
+    <Project Path="tests/TreatmentSession.UnitTests/TreatmentSession.UnitTests.csproj" />
+    <Project Path="tests/TreatmentSession.IntegrationTests/TreatmentSession.IntegrationTests.csproj" />
+    <Project Path="tests/AuditProvenance.UnitTests/AuditProvenance.UnitTests.csproj" />
+    <Project Path="tests/AuditProvenance.IntegrationTests/AuditProvenance.IntegrationTests.csproj" />
+    <Project Path="tests/MeasurementValidation.UnitTests/MeasurementValidation.UnitTests.csproj" />
+    <Project Path="tests/MeasurementValidation.IntegrationTests/MeasurementValidation.IntegrationTests.csproj" />
+    <Project Path="tests/SignalConditioning.UnitTests/SignalConditioning.UnitTests.csproj" />
+    <Project Path="tests/SignalConditioning.IntegrationTests/SignalConditioning.IntegrationTests.csproj" />
+    <Project Path="tests/TerminologyConformance.UnitTests/TerminologyConformance.UnitTests.csproj" />
+    <Project Path="tests/TerminologyConformance.IntegrationTests/TerminologyConformance.IntegrationTests.csproj" />
+    <Project Path="tests/ClinicalInteroperability.UnitTests/ClinicalInteroperability.UnitTests.csproj" />
+    <Project Path="tests/ClinicalInteroperability.IntegrationTests/ClinicalInteroperability.IntegrationTests.csproj" />
+    <Project Path="tests/QueryReadModel.UnitTests/QueryReadModel.UnitTests.csproj" />
+    <Project Path="tests/QueryReadModel.IntegrationTests/QueryReadModel.IntegrationTests.csproj" />
+    <Project Path="tests/RealtimeSurveillance.UnitTests/RealtimeSurveillance.UnitTests.csproj" />
+    <Project Path="tests/RealtimeSurveillance.IntegrationTests/RealtimeSurveillance.IntegrationTests.csproj" />
+    <Project Path="tests/RealtimeDelivery.UnitTests/RealtimeDelivery.UnitTests.csproj" />
+    <Project Path="tests/RealtimeDelivery.IntegrationTests/RealtimeDelivery.IntegrationTests.csproj" />
+    <Project Path="tests/ClinicalAnalytics.UnitTests/ClinicalAnalytics.UnitTests.csproj" />
+    <Project Path="tests/ClinicalAnalytics.IntegrationTests/ClinicalAnalytics.IntegrationTests.csproj" />
+    <Project Path="tests/Reporting.UnitTests/Reporting.UnitTests.csproj" />
+    <Project Path="tests/Reporting.IntegrationTests/Reporting.IntegrationTests.csproj" />
+    <Project Path="tests/WorkflowOrchestrator.UnitTests/WorkflowOrchestrator.UnitTests.csproj" />
+    <Project Path="tests/WorkflowOrchestrator.IntegrationTests/WorkflowOrchestrator.IntegrationTests.csproj" />
+    <Project Path="tests/ReplayRecovery.UnitTests/ReplayRecovery.UnitTests.csproj" />
+    <Project Path="tests/ReplayRecovery.IntegrationTests/ReplayRecovery.IntegrationTests.csproj" />
+    <Project Path="tests/AdministrationConfiguration.UnitTests/AdministrationConfiguration.UnitTests.csproj" />
+    <Project Path="tests/AdministrationConfiguration.IntegrationTests/AdministrationConfiguration.IntegrationTests.csproj" />
+    <Project Path="tests/RealtimePlatform.ContractTests/RealtimePlatform.ContractTests.csproj" />
+    <Project Path="tests/RealtimePlatform.ArchitectureTests/RealtimePlatform.ArchitectureTests.csproj" />
+  </Folder>
+  <Project Path="BuildingBlocks/BuildingBlocks.csproj" />
+  <Project Path="Intercessor/Intercessor.csproj" />
+  <Project Path="Verifier/Verifier.csproj" />
+</Solution>

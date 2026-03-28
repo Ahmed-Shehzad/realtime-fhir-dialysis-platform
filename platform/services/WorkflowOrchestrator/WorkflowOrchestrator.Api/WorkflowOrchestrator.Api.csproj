@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>WorkflowOrchestrator.Api</RootNamespace>
+    <AssemblyName>WorkflowOrchestrator.Api</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WorkflowOrchestrator.Application\WorkflowOrchestrator.Application.csproj" />
+    <ProjectReference Include="..\WorkflowOrchestrator.Domain\WorkflowOrchestrator.Domain.csproj" />
+    <ProjectReference Include="..\WorkflowOrchestrator.Infrastructure\WorkflowOrchestrator.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\..\BuildingBlocks\BuildingBlocks.csproj" />
+    <ProjectReference Include="..\..\..\..\Intercessor\Intercessor.csproj" />
+    <ProjectReference Include="..\..\..\RealtimePlatform.ServiceDefaults\RealtimePlatform.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\..\shared\RealtimePlatform.Observability\RealtimePlatform.Observability.csproj" />
+    <ProjectReference Include="..\..\..\..\platform\shared\RealtimePlatform.MassTransit\RealtimePlatform.MassTransit.csproj" />
+    <ProjectReference Include="..\..\..\shared\RealtimePlatform.Redis\RealtimePlatform.Redis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WorkflowOrchestrator.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

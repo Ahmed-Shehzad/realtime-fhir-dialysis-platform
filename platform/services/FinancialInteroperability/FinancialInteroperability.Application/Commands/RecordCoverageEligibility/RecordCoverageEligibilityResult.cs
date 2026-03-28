@@ -1,0 +1,3 @@
+namespace FinancialInteroperability.Application.Commands.RecordCoverageEligibility;
+
+public sealed record RecordCoverageEligibilityResult(Ulid EligibilityInquiryId);

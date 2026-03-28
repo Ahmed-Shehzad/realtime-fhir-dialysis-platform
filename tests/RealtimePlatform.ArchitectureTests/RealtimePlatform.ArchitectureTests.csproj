@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>RealtimePlatform.ArchitectureTests</RootNamespace>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\platform\services\DeviceRegistry\DeviceRegistry.Application\DeviceRegistry.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\DeviceRegistry\DeviceRegistry.Domain\DeviceRegistry.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\MeasurementAcquisition\MeasurementAcquisition.Application\MeasurementAcquisition.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\MeasurementAcquisition\MeasurementAcquisition.Domain\MeasurementAcquisition.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\TreatmentSession\TreatmentSession.Application\TreatmentSession.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\TreatmentSession\TreatmentSession.Domain\TreatmentSession.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\AuditProvenance\AuditProvenance.Application\AuditProvenance.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\AuditProvenance\AuditProvenance.Domain\AuditProvenance.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\MeasurementValidation\MeasurementValidation.Application\MeasurementValidation.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\MeasurementValidation\MeasurementValidation.Domain\MeasurementValidation.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\SignalConditioning\SignalConditioning.Application\SignalConditioning.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\SignalConditioning\SignalConditioning.Domain\SignalConditioning.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\TerminologyConformance\TerminologyConformance.Application\TerminologyConformance.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\TerminologyConformance\TerminologyConformance.Domain\TerminologyConformance.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\ClinicalInteroperability\ClinicalInteroperability.Application\ClinicalInteroperability.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\ClinicalInteroperability\ClinicalInteroperability.Domain\ClinicalInteroperability.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\FinancialInteroperability\FinancialInteroperability.Application\FinancialInteroperability.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\FinancialInteroperability\FinancialInteroperability.Domain\FinancialInteroperability.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\QueryReadModel\QueryReadModel.Application\QueryReadModel.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\QueryReadModel\QueryReadModel.Domain\QueryReadModel.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\RealtimeSurveillance\RealtimeSurveillance.Application\RealtimeSurveillance.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\RealtimeSurveillance\RealtimeSurveillance.Domain\RealtimeSurveillance.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\RealtimeDelivery\RealtimeDelivery.Application\RealtimeDelivery.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\RealtimeDelivery\RealtimeDelivery.Domain\RealtimeDelivery.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\ClinicalAnalytics\ClinicalAnalytics.Application\ClinicalAnalytics.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\ClinicalAnalytics\ClinicalAnalytics.Domain\ClinicalAnalytics.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\Reporting\Reporting.Application\Reporting.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\Reporting\Reporting.Domain\Reporting.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\WorkflowOrchestrator\WorkflowOrchestrator.Application\WorkflowOrchestrator.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\WorkflowOrchestrator\WorkflowOrchestrator.Domain\WorkflowOrchestrator.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\ReplayRecovery\ReplayRecovery.Application\ReplayRecovery.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\ReplayRecovery\ReplayRecovery.Domain\ReplayRecovery.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\services\AdministrationConfiguration\AdministrationConfiguration.Application\AdministrationConfiguration.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\AdministrationConfiguration\AdministrationConfiguration.Domain\AdministrationConfiguration.Domain.csproj" />
+    <ProjectReference Include="..\..\platform\shared\RealtimePlatform.IntegrationEventCatalog\RealtimePlatform.IntegrationEventCatalog.csproj" />
+    <ProjectReference Include="..\..\platform\shared\RealtimePlatform.Redis\RealtimePlatform.Redis.csproj" />
+    <ProjectReference Include="..\..\platform\shared\RealtimePlatform.Messaging\RealtimePlatform.Messaging.csproj" />
+    <ProjectReference Include="..\..\platform\shared\RealtimePlatform.Workflow\RealtimePlatform.Workflow.csproj" />
+    <ProjectReference Include="..\..\platform\shared\RealtimePlatform.MassTransit\RealtimePlatform.MassTransit.csproj" />
+  </ItemGroup>
+
+</Project>

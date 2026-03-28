@@ -1,0 +1,38 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.1.0">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>155bef32-aff0-40ae-8947-7f5781d40392</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.1.0" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.1.0" />
+  </ItemGroup>
+
+  <!-- API projects and gateway (Aspire generates Projects.* from these references) -->
+  <ItemGroup>
+    <ProjectReference Include="..\gateway\RealtimePlatform.ApiGateway\RealtimePlatform.ApiGateway.csproj" />
+    <ProjectReference Include="..\services\DeviceRegistry\DeviceRegistry.Api\DeviceRegistry.Api.csproj" />
+    <ProjectReference Include="..\services\MeasurementAcquisition\MeasurementAcquisition.Api\MeasurementAcquisition.Api.csproj" />
+    <ProjectReference Include="..\services\TreatmentSession\TreatmentSession.Api\TreatmentSession.Api.csproj" />
+    <ProjectReference Include="..\services\AuditProvenance\AuditProvenance.Api\AuditProvenance.Api.csproj" />
+    <ProjectReference Include="..\services\MeasurementValidation\MeasurementValidation.Api\MeasurementValidation.Api.csproj" />
+    <ProjectReference Include="..\services\SignalConditioning\SignalConditioning.Api\SignalConditioning.Api.csproj" />
+    <ProjectReference Include="..\services\TerminologyConformance\TerminologyConformance.Api\TerminologyConformance.Api.csproj" />
+    <ProjectReference Include="..\services\ClinicalInteroperability\ClinicalInteroperability.Api\ClinicalInteroperability.Api.csproj" />
+    <ProjectReference Include="..\services\FinancialInteroperability\FinancialInteroperability.Api\FinancialInteroperability.Api.csproj" />
+    <ProjectReference Include="..\services\QueryReadModel\QueryReadModel.Api\QueryReadModel.Api.csproj" />
+    <ProjectReference Include="..\services\RealtimeSurveillance\RealtimeSurveillance.Api\RealtimeSurveillance.Api.csproj" />
+    <ProjectReference Include="..\services\RealtimeDelivery\RealtimeDelivery.Api\RealtimeDelivery.Api.csproj" />
+    <ProjectReference Include="..\services\ClinicalAnalytics\ClinicalAnalytics.Api\ClinicalAnalytics.Api.csproj" />
+    <ProjectReference Include="..\services\Reporting\Reporting.Api\Reporting.Api.csproj" />
+    <ProjectReference Include="..\services\WorkflowOrchestrator\WorkflowOrchestrator.Api\WorkflowOrchestrator.Api.csproj" />
+    <ProjectReference Include="..\services\ReplayRecovery\ReplayRecovery.Api\ReplayRecovery.Api.csproj" />
+    <ProjectReference Include="..\services\AdministrationConfiguration\AdministrationConfiguration.Api\AdministrationConfiguration.Api.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,3 @@
+namespace FinancialInteroperability.Application.Commands.RecordClaimAdjudication;
+
+public sealed record RecordClaimAdjudicationResult(bool Updated);

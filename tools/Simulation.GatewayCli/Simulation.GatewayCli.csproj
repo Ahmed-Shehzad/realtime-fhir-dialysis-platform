@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Simulation.GatewayCli</RootNamespace>
+    <AssemblyName>simulate-gateway</AssemblyName>
+    <Nullable>enable</Nullable>
+    <!-- Switch/method chaining layout in this CLI disagrees with repo IDE0055 in some environments. -->
+    <NoWarn>$(NoWarn);IDE0055;S6966</NoWarn>
+  </PropertyGroup>
+
+</Project>

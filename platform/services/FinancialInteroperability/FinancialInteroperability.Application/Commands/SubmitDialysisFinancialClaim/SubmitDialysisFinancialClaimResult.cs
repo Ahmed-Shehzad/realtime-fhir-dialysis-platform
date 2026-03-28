@@ -1,0 +1,3 @@
+namespace FinancialInteroperability.Application.Commands.SubmitDialysisFinancialClaim;
+
+public sealed record SubmitDialysisFinancialClaimResult(Ulid FinancialClaimId);

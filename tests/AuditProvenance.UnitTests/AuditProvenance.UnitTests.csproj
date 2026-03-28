@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>AuditProvenance.UnitTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\BuildingBlocks.csproj" />
+    <ProjectReference Include="..\RealtimePlatform.UnitTesting\RealtimePlatform.UnitTesting.csproj" />
+    <ProjectReference Include="..\..\platform\services\AuditProvenance\AuditProvenance.Application\AuditProvenance.Application.csproj" />
+    <ProjectReference Include="..\..\platform\services\AuditProvenance\AuditProvenance.Domain\AuditProvenance.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

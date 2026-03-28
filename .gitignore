@@ -1,0 +1,137 @@
+## Build outputs (.NET)
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+publish/
+*.cache
+project.lock.json
+project.fragment.lock.json
+*.props.user
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+nuget.exe
+
+## Test & coverage
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+.coverage
+coveragereport/
+BenchmarkDotNet.Artifacts/
+
+## User-specific / local toolchain
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+*.pubxml.user
+## Visual Studio / MSBuild
+.vs/
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+*.pidb
+*.svclog
+*.scc
+.vshistory/
+
+## JetBrains Rider / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+## VS Code (keep optional team shared files)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+## Node / frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+.npm
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+## Vite / frontend build (root-level or future clients)
+**/dist/
+**/dist-ssr/
+
+## Environment & secrets (never commit)
+.env
+.env.*
+!.env.example
+!.env*.example
+*.pfx
+*.p12
+secrets.json
+appsettings.*.local.json
+
+## OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+## Local process / run artifacts
+.run/
+*.pids
+
+## Logs & temp
+logs/
+*.log
+*.log.*
+tmp/
+temp/
+[Tt]emp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+## Docker / local volumes (if used)
+**/docker-data/
+
+## Misc
+*.bak
+*.orig
+*.rej
+local.settings.json
+
+## Sonar / analysis (local)
+.sonar/
+.scannerwork/
+
+## Aspire / local dev artifacts (adjust if you version these)
+*.development.json.bak

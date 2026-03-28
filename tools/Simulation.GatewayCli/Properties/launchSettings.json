@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "scenario-run": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "commandLineArgs": "--tenant default scenario run --prefix rider"
+    },
+    "help": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "commandLineArgs": "--help"
+    },
+    "device-register": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "commandLineArgs": "--verbose --tenant default device register --identifier rider-debug-device"
+    }
+  }
+}
