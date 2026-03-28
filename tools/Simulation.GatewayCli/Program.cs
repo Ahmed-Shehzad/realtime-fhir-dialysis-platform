@@ -109,6 +109,7 @@ internal static class Program
 
             Commands:
               device register --identifier ID [--manufacturer M] [--trust Active|Suspended|Retired]
+              device trust --device-id ID   (GET trust via gateway)
               session create
               session assign-patient --session-id ULID --mrn MRN
               session link-device --session-id ULID --device-id IDENT
@@ -127,31 +128,56 @@ internal static class Program
 
     private async static Task<int> HandleDeviceAsync(GlobalOptions g, List<string> argv, CancellationToken cancellationToken)
     {
-        if (argv.Count < 2 || argv[0] != "register")
+        if (argv.Count < 1)
         {
-            Console.Error.WriteLine("Usage: device register --identifier ID ...");
+            Console.Error.WriteLine("Usage: device register --identifier ID ... | device trust --device-id ID");
             return 1;
         }
 
+        string sub = argv[0];
         argv.RemoveAt(0);
-        var parsed = KeyedOptions.Parse(argv, required: new[] { "--identifier" });
-        string identifier = parsed.Required("--identifier");
-        string manufacturer = parsed.Optional("--manufacturer") ?? "Simulation";
-        string trust = parsed.Optional("--trust") ?? "Active";
-        parsed.ExpectNoRemainingPositional();
 
         Uri baseUri = GatewayHttp.NormalizeGatewayBase(g.GatewayBase);
         using HttpClient client = GatewayHttp.CreateClient(baseUri, g.TenantId, g.BearerToken, g.CorrelationId, g.HttpClientTimeout);
-        var body = new { deviceIdentifier = identifier, manufacturer, initialTrustState = trust };
-        HttpResponseMessage response = await GatewayHttp.PostJsonAsync(
-                client,
-                GatewayApiPaths.Devices(g.ApiVersion),
-                body,
-                cancellationToken,
-                g.TraceHttp)
-            .ConfigureAwait(false);
-        await GatewayHttp.WriteResultAsync(response, cancellationToken).ConfigureAwait(false);
-        return 0;
+
+        if (string.Equals(sub, "register", StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedReg = KeyedOptions.Parse(argv, required: new[] { "--identifier" });
+            string identifier = parsedReg.Required("--identifier");
+            string manufacturer = parsedReg.Optional("--manufacturer") ?? "Simulation";
+            string trust = parsedReg.Optional("--trust") ?? "Active";
+            parsedReg.ExpectNoRemainingPositional();
+
+            var body = new { deviceIdentifier = identifier, manufacturer, initialTrustState = trust };
+            HttpResponseMessage response = await GatewayHttp.PostJsonAsync(
+                    client,
+                    GatewayApiPaths.Devices(g.ApiVersion),
+                    body,
+                    cancellationToken,
+                    g.TraceHttp)
+                .ConfigureAwait(false);
+            await GatewayHttp.WriteResultAsync(response, cancellationToken).ConfigureAwait(false);
+            return 0;
+        }
+
+        if (string.Equals(sub, "trust", StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedTrust = KeyedOptions.Parse(argv, required: new[] { "--device-id" });
+            string deviceId = parsedTrust.Required("--device-id");
+            parsedTrust.ExpectNoRemainingPositional();
+
+            HttpResponseMessage response = await GatewayHttp.GetAsync(
+                    client,
+                    GatewayApiPaths.DeviceTrust(g.ApiVersion, deviceId),
+                    cancellationToken,
+                    g.TraceHttp)
+                .ConfigureAwait(false);
+            await GatewayHttp.WriteResultAsync(response, cancellationToken).ConfigureAwait(false);
+            return 0;
+        }
+
+        Console.Error.WriteLine("Usage: device register --identifier ID ... | device trust --device-id ID");
+        return 1;
     }
 
     private async static Task<int> HandleSessionAsync(GlobalOptions g, List<string> argv, CancellationToken cancellationToken)

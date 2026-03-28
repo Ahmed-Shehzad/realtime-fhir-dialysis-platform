@@ -38,6 +38,7 @@ dotnet run --project platform/RealtimePlatform.AppHost
 
 - Opens the **Aspire dashboard**: resource status, logs, and **PostgreSQL connection details** (host/port for host-side `psql` if a non-default port is published).
 - Spins up **PostgreSQL** (one server, one logical database per bounded context) and starts **RealtimePlatform.ApiGateway** plus every `*Api` project referenced in the AppHost, with `ConnectionStrings:Default` injected for each service that references its database.
+- **`appsettings*.json` and Aspire:** each service `appsettings` includes an **`Aspire`** metadata block; the contract (injected `ConnectionStrings__Default`, published Postgres port, database names) is summarized in [ASPIRE-APPSETTINGS.md](ASPIRE-APPSETTINGS.md).
 
 **First-time schema:** empty databases need EF migrations. With Postgres listening (defaults for scripts: `PGHOST=127.0.0.1`, `PGPORT=5432` — set `PGPORT` from the dashboard if Aspire maps a different host port), from the repo root:
 

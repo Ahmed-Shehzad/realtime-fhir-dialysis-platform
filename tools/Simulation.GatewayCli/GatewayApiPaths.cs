@@ -7,6 +7,10 @@ internal static class GatewayApiPaths
 {
     internal static string Devices(string apiVersion) => $"api/v{apiVersion}/devices";
 
+    /// <summary>GET devices/{deviceId}/trust (DeviceRegistry.Api).</summary>
+    internal static string DeviceTrust(string apiVersion, string deviceId) =>
+        $"{Devices(apiVersion)}/{Uri.EscapeDataString(deviceId)}/trust";
+
     internal static string Sessions(string apiVersion) => $"api/v{apiVersion}/sessions";
 
     internal static string SessionPatient(string apiVersion, string sessionId) =>

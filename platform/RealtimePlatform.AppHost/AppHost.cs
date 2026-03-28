@@ -1,5 +1,6 @@
 using RealtimePlatform.AppHost;
 
+// appsettings*.json alignment: docs/ASPIRE-APPSETTINGS.md (ConnectionStrings__Default, ReverseProxy env overrides, devPostgresPublishedPort).
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
 // In-cluster Host=DevPostgresInClusterHost (Aspire DNS). From the host OS use Host=localhost;Port=DevPostgresPublishedPort.
@@ -16,6 +17,7 @@ IResourceBuilder<ParameterResource> postgresPassword = builder.AddParameter(
 // If "password authentication failed for user postgres", remove the volume or bump its name after credential changes.
 IResourceBuilder<PostgresServerResource> postgres = builder
     .AddPostgres(devPostgresInClusterHost, postgresUser, postgresPassword, devPostgresPublishedPort)
+    .WithHostPort(devPostgresPublishedPort)
     .WithDataVolume(name: "realtime-fhir-dialysis-postgres-data");
 
 static IResourceBuilder<PostgresDatabaseResource> DevDb(
@@ -217,8 +219,7 @@ IResourceBuilder<ProjectResource> administrationConfiguration =
         .WaitFor(dbAdministrationConfiguration)
         .WithAspireReadinessProbe();
 
-// Environment variables override appsettings.Development.json localhost YARP targets so logical
-// host names resolve via Microsoft.Extensions.ServiceDiscovery.Yarp under the AppHost.
+// Override YARP cluster addresses to in-mesh host names with explicit Kestrel ports (http://host/ implies 80).
 _ = builder.AddProject<Projects.RealtimePlatform_ApiGateway>(
         "api-gateway",
         ConfigureProjectForExplicitAspireHttp)
@@ -241,55 +242,55 @@ _ = builder.AddProject<Projects.RealtimePlatform_ApiGateway>(
     .WithReference(administrationConfiguration)
     .WithEnvironment(
         "ReverseProxy__Clusters__device-registry__Destinations__primary__Address",
-        "http://device-registry/")
+        "http://device-registry:5001/")
     .WithEnvironment(
         "ReverseProxy__Clusters__measurement-acquisition__Destinations__primary__Address",
-        "http://measurement-acquisition/")
+        "http://measurement-acquisition:5002/")
     .WithEnvironment(
         "ReverseProxy__Clusters__treatment-session__Destinations__primary__Address",
-        "http://treatment-session/")
+        "http://treatment-session:5003/")
     .WithEnvironment(
         "ReverseProxy__Clusters__audit-provenance__Destinations__primary__Address",
-        "http://audit-provenance/")
+        "http://audit-provenance:5004/")
     .WithEnvironment(
         "ReverseProxy__Clusters__measurement-validation__Destinations__primary__Address",
-        "http://measurement-validation/")
+        "http://measurement-validation:5005/")
     .WithEnvironment(
         "ReverseProxy__Clusters__signal-conditioning__Destinations__primary__Address",
-        "http://signal-conditioning/")
+        "http://signal-conditioning:5006/")
     .WithEnvironment(
         "ReverseProxy__Clusters__terminology-conformance__Destinations__primary__Address",
-        "http://terminology-conformance/")
+        "http://terminology-conformance:5007/")
     .WithEnvironment(
         "ReverseProxy__Clusters__clinical-interoperability__Destinations__primary__Address",
-        "http://clinical-interoperability/")
+        "http://clinical-interoperability:5008/")
     .WithEnvironment(
         "ReverseProxy__Clusters__query-read-model__Destinations__primary__Address",
-        "http://query-read-model/")
+        "http://query-read-model:5009/")
     .WithEnvironment(
         "ReverseProxy__Clusters__realtime-surveillance__Destinations__primary__Address",
-        "http://realtime-surveillance/")
+        "http://realtime-surveillance:5010/")
     .WithEnvironment(
         "ReverseProxy__Clusters__realtime-delivery__Destinations__primary__Address",
-        "http://realtime-delivery/")
+        "http://realtime-delivery:5011/")
     .WithEnvironment(
         "ReverseProxy__Clusters__clinical-analytics__Destinations__primary__Address",
-        "http://clinical-analytics/")
+        "http://clinical-analytics:5012/")
     .WithEnvironment(
         "ReverseProxy__Clusters__reporting__Destinations__primary__Address",
-        "http://reporting/")
+        "http://reporting:5013/")
     .WithEnvironment(
         "ReverseProxy__Clusters__workflow-orchestrator__Destinations__primary__Address",
-        "http://workflow-orchestrator/")
+        "http://workflow-orchestrator:5014/")
     .WithEnvironment(
         "ReverseProxy__Clusters__replay-recovery__Destinations__primary__Address",
-        "http://replay-recovery/")
+        "http://replay-recovery:5015/")
     .WithEnvironment(
         "ReverseProxy__Clusters__administration-configuration__Destinations__primary__Address",
-        "http://administration-configuration/")
+        "http://administration-configuration:5016/")
     .WithEnvironment(
         "ReverseProxy__Clusters__financial-interoperability__Destinations__primary__Address",
-        "http://financial-interoperability/")
+        "http://financial-interoperability:5017/")
     .WithHttpEndpoint(port: 5100, targetPort: 5100, isProxied: false)
     .WithAspNetCoreDevelopmentEnvironment()
     .WaitFor(deviceRegistry)

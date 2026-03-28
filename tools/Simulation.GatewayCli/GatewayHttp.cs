@@ -51,6 +51,17 @@ internal static class GatewayHttp
         return await client.SendAsync(msg, cancellationToken).ConfigureAwait(false);
     }
 
+    internal async static Task<HttpResponseMessage> GetAsync(
+        HttpClient client,
+        string relativePath,
+        CancellationToken cancellationToken,
+        bool traceHttp = false)
+    {
+        using var msg = new HttpRequestMessage(HttpMethod.Get, relativePath);
+        TraceHttpRequest(client, msg, traceHttp);
+        return await client.SendAsync(msg, cancellationToken).ConfigureAwait(false);
+    }
+
     internal static HttpClient CreateClient(
         Uri baseUri,
         string? tenantId,

@@ -50,19 +50,15 @@ public static class EfCoreDevelopmentMigrationExtensions
 
         string? connectionString = app.Configuration.GetConnectionString(connectionName);
         if (string.IsNullOrWhiteSpace(connectionString))
-        {
             throw new InvalidOperationException(
                 $"ConnectionStrings:{connectionName} is required for migrations (see Aspire WithReference or appsettings).");
-        }
 
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>();
         _ = optionsBuilder.UseNpgsql(connectionString);
 
         if (Activator.CreateInstance(typeof(TDbContext), optionsBuilder.Options) is not TDbContext db)
-        {
             throw new InvalidOperationException(
                 $"Cannot create {typeof(TDbContext).Name} for migrations. Add a public constructor accepting DbContextOptions<{typeof(TDbContext).Name}>.");
-        }
 
         await using (db)
         {
@@ -83,19 +79,15 @@ public static class EfCoreDevelopmentMigrationExtensions
             string[] pending =
                 (await db.Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false)).ToArray();
             if (pending.Length > 0)
-            {
                 app.Logger.LogInformation(
                     "EF Core: applying {PendingCount} pending migration(s) for {DbContext}: {MigrationIds}",
                     pending.Length,
                     contextName,
                     string.Join(", ", pending));
-            }
             else
-            {
                 app.Logger.LogInformation(
                     "EF Core: no pending migrations for {DbContext}; database schema is up to date.",
                     contextName);
-            }
 
             await db.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
 

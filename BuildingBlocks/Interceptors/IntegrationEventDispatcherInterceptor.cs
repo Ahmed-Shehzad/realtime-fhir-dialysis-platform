@@ -7,6 +7,7 @@ using MassTransit;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using RealtimePlatform.MassTransit;
@@ -18,24 +19,26 @@ namespace BuildingBlocks.Interceptors;
 /// Register after <see cref="DomainEventDispatcherInterceptor"/> so domain handlers can enqueue integration events first.
 /// </summary>
 /// <remarks>
-/// Scoped registration aligns with <see cref="IPublishEndpoint"/> and <see cref="IPublisher"/> lifetimes.
+/// Scoped registration. <see cref="IPublishEndpoint"/> is resolved inside <see cref="SavingChangesAsync"/> so
+/// building <see cref="DbContextOptions{TContext}"/> (which instantiates this interceptor) does not create a
+/// MassTransit → DbContext construction cycle on the first ORM use (e.g. read-only HTTP handlers).
 /// </remarks>
 public sealed class IntegrationEventDispatcherInterceptor : SaveChangesInterceptor
 {
     private static readonly AsyncLocal<PendingIntegrationWork?> PendingCommit = new();
 
-    private readonly IPublishEndpoint _publishEndpoint;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IPublisher _publisher;
     private readonly RealtimePlatform.Messaging.IMessageSerializer _serializer;
     private readonly OutboxPublisherOptions _publisherOptions;
 
     public IntegrationEventDispatcherInterceptor(
-        IPublishEndpoint publishEndpoint,
+        IServiceProvider serviceProvider,
         IPublisher publisher,
         RealtimePlatform.Messaging.IMessageSerializer serializer,
         IOptions<OutboxPublisherOptions> publisherOptions)
     {
-        _publishEndpoint = publishEndpoint ?? throw new ArgumentNullException(nameof(publishEndpoint));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         ArgumentNullException.ThrowIfNull(publisherOptions);
@@ -112,6 +115,8 @@ public sealed class IntegrationEventDispatcherInterceptor : SaveChangesIntercept
         if (aggregates.Count == 0)
             return null;
 
+        IPublishEndpoint publishEndpoint = _serviceProvider.GetRequiredService<IPublishEndpoint>();
+
         List<IIntegrationEvent> integrationEvents = [.. aggregates.SelectMany(static a => a.IntegrationEvents)];
         var messageIds = new HashSet<Ulid>();
 
@@ -126,7 +131,7 @@ public sealed class IntegrationEventDispatcherInterceptor : SaveChangesIntercept
             CatalogIntegrationEventTransport transport =
                 IntegrationEventCatalogTransportMapper.ToTransport(integrationEvent, _serializer);
 
-            await _publishEndpoint
+            await publishEndpoint
                 .Publish(
                     transport,
                     ctx =>
