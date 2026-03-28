@@ -2,10 +2,12 @@ using System.Security.Claims;
 
 using Asp.Versioning;
 
+using BuildingBlocks.Authorization;
 using BuildingBlocks.Correlation;
 
 using Intercessor.Abstractions;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using TreatmentSession.Application.Commands.AssignPatient;
@@ -35,7 +37,7 @@ public sealed class SessionsController : ControllerBase
 
     /// <summary>Creates a session in Created state.</summary>
     [HttpPost]
-    // [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
+    [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
     [ProducesResponseType(typeof(CreateSessionResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<CreateSessionResponse>> CreateAsync(CancellationToken cancellationToken)
     {
@@ -48,7 +50,7 @@ public sealed class SessionsController : ControllerBase
 
     /// <summary>Assigns patient (MRN) to a created session.</summary>
     [HttpPost("{sessionId}/patient")]
-    // [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
+    [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> AssignPatientAsync(
         string sessionId,
@@ -73,7 +75,7 @@ public sealed class SessionsController : ControllerBase
 
     /// <summary>Links a device to a created session.</summary>
     [HttpPost("{sessionId}/device")]
-    // [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
+    [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> LinkDeviceAsync(
         string sessionId,
@@ -98,7 +100,7 @@ public sealed class SessionsController : ControllerBase
 
     /// <summary>Starts the session (Created → Active).</summary>
     [HttpPost("{sessionId}/start")]
-    // [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
+    [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> StartAsync(string sessionId, CancellationToken cancellationToken)
     {
@@ -117,7 +119,7 @@ public sealed class SessionsController : ControllerBase
 
     /// <summary>Completes an active session.</summary>
     [HttpPost("{sessionId}/complete")]
-    // [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
+    [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> CompleteAsync(string sessionId, CancellationToken cancellationToken)
     {
@@ -136,7 +138,7 @@ public sealed class SessionsController : ControllerBase
 
     /// <summary>Records measurement context resolved.</summary>
     [HttpPost("{sessionId}/measurements/{measurementId}/context/resolved")]
-    // [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
+    [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> ResolveContextAsync(
         string sessionId,
@@ -161,7 +163,7 @@ public sealed class SessionsController : ControllerBase
 
     /// <summary>Records measurement context unresolved.</summary>
     [HttpPost("{sessionId}/measurements/{measurementId}/context/unresolved")]
-    // [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
+    [Authorize(Policy = PlatformAuthorizationPolicies.SessionsWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> MarkUnresolvedAsync(
         string sessionId,
