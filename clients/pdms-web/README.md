@@ -57,7 +57,7 @@ Live UI uses **`ClinicalFeedHub`** on the gateway path **`/hubs/clinical-feed`**
 
 **Backend:** Run **RealtimePlatform.ApiGateway** and **RealtimeDelivery.Api** (port **5011** in default YARP clusters). In **Development**, `Authentication:JwtBearer:DevelopmentBypass` on services allows hub authorization without a real JWT.
 
-**Try it:** from the repo root run `./scripts/run-simulation-gateway-cli.sh --tenant default scenario run --prefix demo`, copy the printed `treatmentSessionId`, open `http://localhost:5173/?sessionId=<that-id>`, and watch the session feed and tenant alerts panels update.
+**Try it:** from the repo root run `SIMULATION_GATEWAY_TENANT=default ./scripts/run-simulation-gateway-cli.sh` (optional: `SIMULATION_SCENARIO_PREFIX=demo`), copy the printed `treatmentSessionId`, open `http://localhost:5173/?sessionId=<that-id>`, and watch the session feed and tenant alerts panels update.
 
 ## TanStack Query retry policy
 

@@ -15,10 +15,13 @@ IResourceBuilder<ParameterResource> postgresPassword = builder.AddParameter(
 
 // PGDATA is initialized once per Docker volume; POSTGRES_PASSWORD is not reapplied on later runs.
 // If "password authentication failed for user postgres", remove the volume or bump its name after credential changes.
+// Many bounded contexts default Npgsql Max Pool Size to 100; a single shared dev Postgres instance
+// otherwise hits 53300 "too many clients" once pools warm up across services.
 IResourceBuilder<PostgresServerResource> postgres = builder
     .AddPostgres(devPostgresInClusterHost, postgresUser, postgresPassword, devPostgresPublishedPort)
     .WithHostPort(devPostgresPublishedPort)
-    .WithDataVolume(name: "realtime-fhir-dialysis-postgres-data");
+    .WithDataVolume(name: "realtime-fhir-dialysis-postgres-data")
+    .WithArgs("-c", "max_connections=500");
 
 static IResourceBuilder<PostgresDatabaseResource> DevDb(
     IResourceBuilder<PostgresServerResource> pg,

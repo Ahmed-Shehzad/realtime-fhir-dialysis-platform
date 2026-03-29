@@ -13,6 +13,7 @@ using Intercessor.Abstractions;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
 
 namespace ClinicalInteroperability.Api.Controllers;
 
@@ -92,7 +93,8 @@ public sealed class MeasurementCanonicalPublicationsController : ControllerBase
         ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 }
 
-public sealed record PublishCanonicalObservationRequest(string? FhirProfileUrl);
+public sealed record PublishCanonicalObservationRequest(
+    [property: JsonPropertyName("fhirProfileUrl")] string? FhirProfileUrl);
 
 public sealed record PublishCanonicalObservationResponse(
     string PublicationId,

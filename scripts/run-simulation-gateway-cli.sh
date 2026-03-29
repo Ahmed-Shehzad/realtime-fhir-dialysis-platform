@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Run Simulation.GatewayCli from the repository root (forwards args to simulate-gateway).
+# Run Simulation.GatewayCli from the repository root (no CLI arguments; use env vars).
 #
-# Usage (repo root or any path):
-#   ./scripts/run-simulation-gateway-cli.sh --help
-#   ./scripts/run-simulation-gateway-cli.sh --tenant default scenario run --prefix demo
+# Usage (repo root):
+#   ./scripts/run-simulation-gateway-cli.sh
 #
-# Env (optional): SIMULATION_GATEWAY_BASE, SIMULATION_GATEWAY_TENANT, SIMULATION_GATEWAY_BEARER_TOKEN
+# Common env: SIMULATION_GATEWAY_BASE, SIMULATION_GATEWAY_TENANT (or SIMULATION_TENANT),
+#   SIMULATION_SCENARIO_PREFIX or SIMULATION_GATEWAY_INGEST_PREFIX, SIMULATION_GATEWAY_BEARER_TOKEN
 # See tools/Simulation.GatewayCli/README.md
 
 set -euo pipefail
@@ -13,4 +13,4 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-exec dotnet run --project "$ROOT/tools/Simulation.GatewayCli" -- "$@"
+exec dotnet run --project "$ROOT/tools/Simulation.GatewayCli"

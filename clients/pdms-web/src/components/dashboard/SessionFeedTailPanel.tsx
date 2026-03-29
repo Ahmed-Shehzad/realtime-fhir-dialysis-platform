@@ -37,7 +37,7 @@ export function SessionFeedTailPanel(props: SessionFeedTailPanelProps): ReactEle
       </p>
       {feedQuery.data.length === 0 ? (
         <p className="mt-4 text-sm text-slate-500">
-          No session events yet. Run <code className="rounded bg-slate-100 px-1">scenario run</code> or{' '}
+          No session events yet. Run <code className="rounded bg-slate-100 px-1">simulate-gateway</code> (same tenant) or{' '}
           <code className="rounded bg-slate-100 px-1">broadcast session</code> for this session id.
         </p>
       ) : (

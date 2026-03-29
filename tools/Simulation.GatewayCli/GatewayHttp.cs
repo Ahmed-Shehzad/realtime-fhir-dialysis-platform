@@ -94,6 +94,50 @@ internal static class GatewayHttp
         return await client.PostAsync(relativePath, content, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>POST JSON and deserialize success body (2xx). On failure, throws with HTTP details (same style as <see cref="WriteResultAsync"/>).</summary>
+    internal async static Task<TResponse> PostJsonReadAsync<TResponse>(
+        HttpClient client,
+        string relativePath,
+        object body,
+        CancellationToken cancellationToken,
+        bool traceHttp = false)
+    {
+        HttpResponseMessage response = await PostJsonAsync(client, relativePath, body, cancellationToken, traceHttp)
+            .ConfigureAwait(false);
+        string text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            string detail = FormatHttpErrorBody(text, maxLength: 2048);
+            string reason = response.ReasonPhrase?.Trim() ?? "";
+            string statusLine = string.IsNullOrEmpty(reason)
+                ? $"{(int)response.StatusCode}"
+                : $"{(int)response.StatusCode} {reason}";
+            throw new InvalidOperationException($"HTTP {statusLine}: {detail}");
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+            throw new InvalidOperationException("Success response had an empty body; expected JSON.");
+
+        return JsonSerializer.Deserialize<TResponse>(text, JsonReadOptions)
+            ?? throw new InvalidOperationException("JSON deserialization returned null.");
+    }
+
+    internal async static Task ExpectNoContentAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        string text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            string detail = FormatHttpErrorBody(text, maxLength: 2048);
+            string reason = response.ReasonPhrase?.Trim() ?? "";
+            string statusLine = string.IsNullOrEmpty(reason)
+                ? $"{(int)response.StatusCode}"
+                : $"{(int)response.StatusCode} {reason}";
+            throw new InvalidOperationException($"HTTP {statusLine}: {detail}");
+        }
+    }
+
     internal async static Task WriteResultAsync(
         HttpResponseMessage response,
         CancellationToken cancellationToken,

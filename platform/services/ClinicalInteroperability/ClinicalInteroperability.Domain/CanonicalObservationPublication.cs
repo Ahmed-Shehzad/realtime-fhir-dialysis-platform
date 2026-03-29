@@ -80,7 +80,7 @@ public sealed class CanonicalObservationPublication : AggregateRoot
         LastAttemptAtUtc = DateTimeOffset.UtcNow;
         ApplyUpdateDateTime();
 
-        if (StubShouldFail(MeasurementId, AttemptCount))
+        if (StubShouldFail(MeasurementId, FhirProfileUrl, AttemptCount))
         {
             State = CanonicalPublicationState.Failed;
             FhirResourceReference = null;
@@ -111,12 +111,15 @@ public sealed class CanonicalObservationPublication : AggregateRoot
             });
     }
 
-    private static bool StubShouldFail(string measurementId, int attemptCount)
+    private static bool StubShouldFail(string measurementId, string? fhirProfileUrl, int attemptCount)
     {
         if (measurementId.Contains("perm-fhir-fail", StringComparison.OrdinalIgnoreCase))
             return true;
-        return measurementId.Contains("transient-once", StringComparison.OrdinalIgnoreCase)
-            && attemptCount == 1;
+        bool transientMarker =
+            measurementId.Contains("transient-once", StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrEmpty(fhirProfileUrl)
+                && fhirProfileUrl.Contains("transient-once", StringComparison.OrdinalIgnoreCase));
+        return transientMarker && attemptCount == 1;
     }
 
     private static string? NormalizeProfileUrl(string? value)

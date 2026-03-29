@@ -1,82 +1,52 @@
 # Simulation.GatewayCli (`simulate-gateway`)
 
-Console harness that sends **HTTP POST** requests to **RealtimePlatform.ApiGateway** only (default `http://localhost:5100` when `--gateway` / `SIMULATION_GATEWAY_BASE` unset), with optional **`X-Tenant-Id`**, **`Authorization: Bearer`**, and **`X-Correlation-Id`**.
+Console app that **always** runs one **full comprehensive ingest** ([`ComprehensiveRelationalIngest.cs`](ComprehensiveRelationalIngest.cs)): every gateway-routed **POST** (admin, device/session graph, parallel measurements and pipelines, publication retry, surveillance lifecycle, workflow branches, financial chain, read-model rebuild and upserts, replay-recovery, audit/provenance, session complete). **Command-line arguments are ignored**; configure with **environment variables** only.
 
-Use this to drive **devices**, **sessions**, **measurements**, **delivery broadcast** (SignalR feed), or the bundled **`scenario run`** pipeline while debugging **pdms-web** or other clients.
+Default gateway URL is `http://localhost:5100` when `SIMULATION_GATEWAY_BASE` is unset.
 
 ## Build / run
 
 From the repository root:
 
 ```bash
-./scripts/run-simulation-gateway-cli.sh --help
+SIMULATION_GATEWAY_TENANT=default ./scripts/run-simulation-gateway-cli.sh
 ```
 
 Or:
 
 ```bash
-dotnet run --project tools/Simulation.GatewayCli -- --help
+SIMULATION_GATEWAY_TENANT=default dotnet run --project tools/Simulation.GatewayCli
 ```
 
-Or build and execute the binary under `tools/Simulation.GatewayCli/bin/Debug/net10.0/simulate-gateway`.
+Or execute `tools/Simulation.GatewayCli/bin/Debug/net10.0/simulate-gateway` (same env vars).
 
 ## JetBrains Rider
 
-The project is in the solution under **tools**. Open **Run → Edit Configurations…**, ensure the configuration type is **.NET Project** for `Simulation.GatewayCli`, then:
-
-1. **Launch Profiles**: choose **`scenario-run`**, **`help`**, or **`device-register`** (from [`Properties/launchSettings.json`](Properties/launchSettings.json)), or edit **Program arguments** / **Environment variables** on that configuration for one-off debugging.
-2. Arguments are everything after `dotnet run -- …` (e.g. `--tenant default scenario run --prefix demo`).
-3. Use **Run** or **Debug** as usual; breakpoints in `Program.cs` / `GatewayHttp.cs` bind to this executable.
-
-With **pdms-web**, you can also use [`scripts/run-dev-backend-and-frontend.sh`](../../scripts/run-dev-backend-and-frontend.sh) after the gateway and APIs are up (waits for `/health`, runs a one-shot `scenario run` by default, then Vite — see that script’s header for `SKIP_GATEWAY_WAIT` / `AUTO_SIMULATOR_SCENARIO`).
+Open **Run → Edit Configurations…** for `Simulation.GatewayCli`. Use profile **`simulate-gateway`** in [`Properties/launchSettings.json`](Properties/launchSettings.json) (`SIMULATION_GATEWAY_TENANT`, `SIMULATION_SCENARIO_PREFIX`) or set **Environment variables** yourself. **Program arguments** are not used.
 
 ## Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `SIMULATION_GATEWAY_BASE` | Gateway URL if `--gateway` omitted (default `http://localhost:5100`). |
-| `SIMULATION_GATEWAY_TENANT` | `X-Tenant-Id` if `--tenant` omitted. |
-| `SIMULATION_GATEWAY_BEARER_TOKEN` | JWT if `--token` omitted (non-dev environments). |
+| `SIMULATION_GATEWAY_BASE` | Gateway base URL (default `http://localhost:5100`). |
+| `SIMULATION_GATEWAY_TENANT` | `X-Tenant-Id` (alias: `SIMULATION_TENANT`). |
+| `SIMULATION_GATEWAY_BEARER_TOKEN` | `Authorization: Bearer` (non-dev / enforced auth). |
+| `SIMULATION_GATEWAY_CORRELATION_ID` | Optional `X-Correlation-Id`. |
+| `SIMULATION_GATEWAY_API_VERSION` | API path segment (default `1`). |
+| `SIMULATION_GATEWAY_TIMEOUT_SECONDS` | HttpClient timeout seconds (default 120). |
+| `SIMULATION_GATEWAY_VERBOSE` | Truthy (`1` / `true` / `yes`) — log request URLs to stderr. |
+| `SIMULATION_GATEWAY_INGEST_PREFIX` | Prefix for generated resource names (overrides scenario prefix). |
+| `SIMULATION_SCENARIO_PREFIX` | Prefix if `SIMULATION_GATEWAY_INGEST_PREFIX` unset; if both unset, default `sim`. |
 
-CLI flags override env vars.
+**Stdout:** one JSON summary (camelCase) at the end — `treatmentSessionId`, `medicalRecordNumber`, `deviceIdentifier`, measurement and report IDs, audit/provenance IDs, etc. (see `ComprehensiveRelationalIngest.Summary`).
 
 ## Prerequisites
 
-- Gateway and all **target** services running for the commands you use (see YARP routes).
-- PostgreSQL + EF migrations for services that persist data: run **`RealtimePlatform.AppHost`**, then [`scripts/dev-database-setup.sh`](../../scripts/dev-database-setup.sh) from the repo root (see [`docs/DEVELOPMENT-ENVIRONMENT.md`](../../docs/DEVELOPMENT-ENVIRONMENT.md)).
-- **Development** hosts often use JWT bypass; production-shaped runs need a real bearer with scopes (`SessionsWrite`, `DevicesWrite`, `MeasurementsWrite`, `DeliveryWrite`, etc.).
+- **RealtimePlatform.AppHost** (or equivalent): all services behind the gateway, PostgreSQL migrated.
+- **Development** often uses JWT bypass on gateway and services; production-shaped runs need a bearer whose scopes cover all policies touched by the ingest (see `BuildingBlocks.Authorization.PlatformAuthorizationPolicies`).
 
-## Minimal vs full stack
+## Stack footprint
 
-- **`broadcast session`** / **`broadcast alert`**: needs gateway + **RealtimeDelivery** (and `DeliveryWrite` policy in real auth).
-- **`scenario run`**: device → session → patient → device link → start → measurement → **`delivery/broadcast/session`** → **`delivery/broadcast/alert`** → (unless **`--skip-read-model`**) **`POST …/projections/alerts`** and **`POST …/projections/session-overview`** so **`GET /alerts`**, dashboard summary, and SignalR stay aligned for **pdms-web**.
-- **`projection upsert-alert`** / **`projection upsert-session-overview`**: direct read-model writes (`ReadModelWrite` scope when auth is enforced).
-- Omit **`--skip-read-model`** only when **QueryReadModel** (:5009 via YARP) is running; otherwise scenario stops at projection steps.
-- **Read model** (`GET …/sessions/{id}/overview`): after **`scenario run`** without skip, overview is upserted over HTTP; still verify **`GET`** matches your tenant.
+The ingest expects **AdministrationConfiguration**, **MeasurementAcquisition**, **MeasurementValidation**, **SignalConditioning**, **ClinicalInteroperability**, **TreatmentSession**, **AuditProvenance**, **RealtimeSurveillance**, **TerminologyConformance**, **WorkflowOrchestrator**, **ClinicalAnalytics**, **Reporting**, **FinancialInteroperability**, **ReplayRecovery**, **QueryReadModel**, and **RealtimeDelivery** to be up unless you change [`ComprehensiveRelationalIngest.cs`](ComprehensiveRelationalIngest.cs) (there are no skip switches in the executable entry point).
 
-## Commands
-
-Global options (any order **before** the first verb): `--gateway`, `--tenant`, `--token`, `--correlation-id`, `--api-version`.
-
-See `simulate-gateway --help` for the current list.
-
-Example:
-
-```bash
-./scripts/run-simulation-gateway-cli.sh --tenant default scenario run --prefix demo
-```
-
-Same via `dotnet run`:
-
-```bash
-dotnet run --project tools/Simulation.GatewayCli -- --tenant default scenario run --prefix demo
-```
-
-SignalR-only check (session id must match a group your browser joined, e.g. dashboard `?sessionId=`):
-
-```bash
-dotnet run --project tools/Simulation.GatewayCli -- broadcast session \
-  --session-id YOUR_ULID \
-  --event-type Simulation.Manual \
-  --summary "hello from CLI"
-```
+With **pdms-web**, [`scripts/run-dev-backend-and-frontend.sh`](../../scripts/run-dev-backend-and-frontend.sh) waits for gateway health, runs this project once (with `SIMULATION_GATEWAY_TENANT` / `SIMULATION_SCENARIO_PREFIX`), then **Vite** (see `SKIP_GATEWAY_WAIT` / `AUTO_SIMULATOR_SCENARIO` in that script).

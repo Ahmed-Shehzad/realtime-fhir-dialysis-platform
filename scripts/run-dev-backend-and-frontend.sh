@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run pdms-web (Vite) and optionally Simulation.GatewayCli once — does NOT start API hosts or the gateway.
-# Start DeviceRegistry, TreatmentSession, MeasurementAcquisition, QueryReadModel, RealtimeDelivery, and
-# ApiGateway separately (Rider compound, other terminals, etc.).
+# Default simulator: full gateway ingest via dotnet run (env: SIMULATION_GATEWAY_TENANT, SIMULATION_SCENARIO_PREFIX, etc.)
+# That is the COMPREHENSIVE gateway ingest (many services). Start RealtimePlatform.AppHost (or full equivalent) first.
 #
 # Prerequisites: PostgreSQL + APIs + gateway reachable at SIMULATION_GATEWAY_BASE (default http://localhost:5100),
 # .NET 10, Node/npm.
@@ -12,9 +12,9 @@
 #   SKIP_GATEWAY_WAIT=1 ./scripts/run-dev-backend-and-frontend.sh
 #   AUTO_SIMULATOR_SCENARIO=0 ./scripts/run-dev-backend-and-frontend.sh   # no scenario; only Vite
 #   SIMULATION_TENANT=mytenant ./scripts/run-dev-backend-and-frontend.sh
-#   ./scripts/run-dev-backend-and-frontend.sh -- --tenant default scenario run --prefix demo
+#   SIMULATION_GATEWAY_TENANT=default SIMULATION_SCENARIO_PREFIX=demo ./scripts/run-dev-backend-and-frontend.sh
 #
-# Logs: .run/logs/simulator.log when the simulator runs. Ctrl+C stops Vite; cleanup kills a still-running simulator child.
+# Logs: .run/logs/simulator.log when the simulator runs. stdout summary JSON is in that log. Ctrl+C stops Vite; cleanup kills a still-running simulator child.
 
 set -euo pipefail
 
@@ -57,15 +57,6 @@ wait_for_gateway() {
   exit 1
 }
 
-start_simulator_background() {
-  echo "Running Simulation.GatewayCli (log: .run/logs/simulator.log)..."
-  (
-    cd "$ROOT"
-    dotnet run --project "$SIM_PROJECT" -- "$@" >> "$LOG_DIR/simulator.log" 2>&1
-  ) &
-  echo $! >> "$PID_FILE"
-}
-
 if [[ "${FRONTEND_ONLY:-}" == "1" ]] || [[ "${FRONTEND_ONLY:-}" == "true" ]]; then
   trap - EXIT INT TERM
   cd "$ROOT/clients/pdms-web"
@@ -84,24 +75,19 @@ else
   echo "SKIP_GATEWAY_WAIT=1 — not checking gateway health."
 fi
 
-sim_args=()
-pass_through=false
-for arg in "$@"; do
-  if [[ "$pass_through" == true ]]; then
-    sim_args+=("$arg")
-  elif [[ "$arg" == "--" ]]; then
-    pass_through=true
-  fi
-done
-
-if [[ ${#sim_args[@]} -gt 0 ]]; then
-  start_simulator_background "${sim_args[@]}"
-elif [[ "${AUTO_SIMULATOR_SCENARIO:-1}" == "1" ]] || [[ "${AUTO_SIMULATOR_SCENARIO:-1}" == "true" ]]; then
+if [[ "${AUTO_SIMULATOR_SCENARIO:-1}" == "1" ]] || [[ "${AUTO_SIMULATOR_SCENARIO:-1}" == "true" ]]; then
+  echo "Running Simulation.GatewayCli (log: .run/logs/simulator.log)..."
   tenant="${SIMULATION_TENANT:-${SIMULATION_GATEWAY_TENANT:-default}}"
   prefix="${SIMULATION_SCENARIO_PREFIX:-devstack}"
-  start_simulator_background --tenant "$tenant" scenario run --prefix "$prefix"
+  (
+    cd "$ROOT"
+    export SIMULATION_GATEWAY_TENANT="$tenant"
+    export SIMULATION_SCENARIO_PREFIX="$prefix"
+    dotnet run --project "$SIM_PROJECT" >> "$LOG_DIR/simulator.log" 2>&1
+  ) &
+  echo $! >> "$PID_FILE"
 else
-  echo "AUTO_SIMULATOR_SCENARIO=0 and no args after -- ; not starting Simulation.GatewayCli."
+  echo "AUTO_SIMULATOR_SCENARIO=0 — not starting Simulation.GatewayCli."
 fi
 
 trap - EXIT

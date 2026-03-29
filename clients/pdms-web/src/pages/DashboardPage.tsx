@@ -16,18 +16,42 @@ import { RealtimeHubBanner } from '../components/dashboard/RealtimeHubBanner'
 import { SessionSummaryCard } from '../components/dashboard/SessionSummaryCard'
 import { SessionFeedTailPanel } from '../components/dashboard/SessionFeedTailPanel'
 import { TenantAlertsFeedPanel } from '../components/dashboard/TenantAlertsFeedPanel'
-import { VitalsLineChart, type VitalPoint } from '../components/VitalsLineChart'
+import {
+  vitalSeriesWithDefaultColors,
+  VitalsTrendChart,
+  type VitalSeriesDefinition,
+} from '../components/VitalsTrendChart'
+import type { VitalPoint } from '../components/VitalsLineChart'
 import { runtimeConfig } from '../config/runtimeConfig'
 import { useBackendHealthQuery } from '../hooks/useBackendHealthQuery'
 import { useFinancialTimelineQuery } from '../hooks/useFinancialTimelineQuery'
 import { useSessionOverviewQuery } from '../hooks/useSessionOverviewQuery'
 
-function buildDemoVitals(): VitalPoint[] {
+function buildDemoVitalsMultiSeries(): VitalSeriesDefinition[] {
   const now = Date.now()
-  return Array.from({ length: 24 }, (_, index) => ({
-    t: new Date(now - (23 - index) * 3_600_000),
-    value: 118 + Math.sin(index / 3) * 9 + index * 0.05,
+  const n = 36
+  const times = Array.from({ length: n }, (_, index) => new Date(now - (n - 1 - index) * 2_400_000))
+
+  const mapPoints: VitalPoint[] = times.map((t, index) => ({
+    t,
+    value: 72 + Math.sin(index / 4) * 10 + index * 0.12 + (index > 22 ? (index - 22) * 0.8 : 0),
   }))
+
+  const hrPoints: VitalPoint[] = times.map((t, index) => ({
+    t,
+    value: 68 + Math.sin(index / 2.5) * 12 + (index % 5) * 2,
+  }))
+
+  const spo2Points: VitalPoint[] = times.map((t, index) => ({
+    t,
+    value: 97 + Math.sin(index / 6) * 1.2 - (index > 26 ? (index - 26) * 0.15 : 0),
+  }))
+
+  return vitalSeriesWithDefaultColors([
+    { id: 'map', label: 'Mean arterial pressure', unit: 'mmHg', points: mapPoints },
+    { id: 'hr', label: 'Heart rate', unit: '/min', points: hrPoints },
+    { id: 'spo2', label: 'SpO₂ (estimated)', unit: '%', points: spo2Points },
+  ])
 }
 
 export default function DashboardPage(): ReactElement {
@@ -49,7 +73,7 @@ export default function DashboardPage(): ReactElement {
     hasFinancialRole,
   )
 
-  const demoVitals = useMemo(() => buildDemoVitals(), [])
+  const demoVitalsSeries = useMemo(() => buildDemoVitalsMultiSeries(), [])
 
   const envBadge = import.meta.env.PROD ? 'production' : 'development'
 
@@ -128,30 +152,33 @@ export default function DashboardPage(): ReactElement {
             </RoleGate>
 
             <section
-              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-6"
+              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-12"
               aria-labelledby="dash-vitals-title"
             >
               <h2 id="dash-vitals-title" className="text-base font-semibold text-slate-800">
                 Vitals trend
               </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Demo series until an Observation (FHIR) feed is wired. The SVG uses{' '}
-                <code className="rounded bg-slate-100 px-1">role=&quot;img&quot;</code> and a summary{' '}
-                <code className="rounded bg-slate-100 px-1">aria-label</code> (time span, sample count, value range).
+              <p className="mt-1 max-w-3xl text-sm text-slate-600">
+                Multi-series demo (Bokeh-style): dual Y-axes when units differ, grid, zoom/pan, hover crosshair + tooltip,
+                and a toggleable legend. Wire to Observation / canonical feed when available. SVG exposes{' '}
+                <code className="rounded bg-slate-100 px-1">role=&quot;img&quot;</code> and a descriptive{' '}
+                <code className="rounded bg-slate-100 px-1">aria-label</code>.
               </p>
               <p className="mt-2 text-xs text-slate-500">
-                Chart data is sample-only; session / patient selections above drive read-model and financial panels, not
-                this series.
+                Sample data only — session / patient selectors drive read-model and financial panels, not this chart.
                 {sessionIdFromUrl ? (
                   <>
                     {' '}
-                    Active context session:{' '}
-                    <span className="font-mono text-slate-700">{sessionIdFromUrl}</span>
+                    Active context: <span className="font-mono text-slate-700">{sessionIdFromUrl}</span>
                   </>
                 ) : null}
               </p>
               <div className="mt-4">
-                <VitalsLineChart series={demoVitals} label="Mean arterial pressure (demo)" valueLabel="mmHg" />
+                <VitalsTrendChart
+                  series={demoVitalsSeries}
+                  title="Hemodynamics & oxygenation (simulated session)"
+                  subtitle="With three unit types visible, one shared Y scale spans all traces (read units in the tooltip). Exactly two unit types use independent left and right axes."
+                />
               </div>
             </section>
 

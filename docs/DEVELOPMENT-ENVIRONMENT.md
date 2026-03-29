@@ -79,25 +79,25 @@ npm run dev
 
 Details: [clients/pdms-web/README.md](../clients/pdms-web/README.md).
 
-**Simulator + Vite:** [`scripts/run-dev-backend-and-frontend.sh`](../scripts/run-dev-backend-and-frontend.sh) does not start the Aspire host — start the AppHost first (or your own terminals). The script waits for `GET /health` on `SIMULATION_GATEWAY_BASE`, runs **Simulation.GatewayCli** once by default, then **`npm run dev`**.
+**Simulator + Vite:** [`scripts/run-dev-backend-and-frontend.sh`](../scripts/run-dev-backend-and-frontend.sh) does not start the Aspire host — start the AppHost first (or your own terminals). The script waits for `GET /health` on `SIMULATION_GATEWAY_BASE`, then runs **Simulation.GatewayCli** once (**comprehensive** ingest via env: **`SIMULATION_GATEWAY_TENANT`**, **`SIMULATION_SCENARIO_PREFIX`**, …). Set **`AUTO_SIMULATOR_SCENARIO=0`** to skip the simulator and only start Vite. Details: [tools/Simulation.GatewayCli/README.md](../tools/Simulation.GatewayCli/README.md).
 
 ## 7. Simulated traffic (CLI)
 
 ```bash
-dotnet run --project tools/Simulation.GatewayCli -- --help
+SIMULATION_GATEWAY_TENANT=default dotnet run --project tools/Simulation.GatewayCli
 ```
 
-See [tools/Simulation.GatewayCli/README.md](../tools/Simulation.GatewayCli/README.md).
+See [tools/Simulation.GatewayCli/README.md](../tools/Simulation.GatewayCli/README.md) for environment variables and the **stdout JSON** summary (`treatmentSessionId`, `medicalRecordNumber`, measurement and report IDs, etc.).
 
 ### 7.1 Simulator + pdms-web realtime (quick checklist)
 
 | Step | What |
 |------|------|
 | Data | Aspire AppHost + `./scripts/dev-database-setup.sh` so `*_dev` schemas exist. |
-| Gateway | Reachable URL (dashboard); YARP targets **localhost** **5001** (devices), **5002** (measurements), **5003** (sessions), **5009** (read model), **5011** (delivery / SignalR). |
-| Web | `clients/pdms-web`: `.env.local` with **`VITE_APP_TENANT_ID`** = **`simulate-gateway --tenant`**; include `readmodel.read` and `delivery.read` in **`VITE_APP_ROLES`**. |
+| Gateway | Reachable URL (dashboard); **Simulation.GatewayCli** needs **all** API resources the AppHost starts for the full ingest (admin, validation, conditioning, interoperability, audit, surveillance, terminology, workflow, analytics, reporting, financial, replay, delivery, read model, …). |
+| Web | `clients/pdms-web`: `.env.local` with **`VITE_APP_TENANT_ID`** = **`SIMULATION_GATEWAY_TENANT`** (same tenant as the simulator); include `readmodel.read` and `delivery.read` in **`VITE_APP_ROLES`**. |
 | Verify | `./scripts/verify-simulation-realtime-stack.sh`. |
-| Scenario | `./scripts/run-simulation-gateway-cli.sh --tenant default scenario run` — use **`treatmentSessionId`** in dashboard **`?sessionId=`**. |
+| Scenario | `./scripts/run-simulation-gateway-cli.sh` (set **`SIMULATION_GATEWAY_TENANT`**) — copy stdout **`treatmentSessionId`** into dashboard **`?sessionId=`**. |
 
 ## 8. Common issues
 

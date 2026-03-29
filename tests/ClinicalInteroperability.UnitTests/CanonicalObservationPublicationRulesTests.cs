@@ -54,4 +54,29 @@ public sealed class CanonicalObservationPublicationRulesTests
         CanonicalObservationPublication p = CanonicalObservationPublication.StartPublication(c, "m-ok", null, null);
         _ = Should.Throw<InvalidOperationException>(() => p.RetryPublication(Ulid.NewUlid(), null));
     }
+
+    [Fact]
+    public void Transient_fail_via_fhir_profile_fragment_then_retry_succeeds()
+    {
+        Ulid c1 = Ulid.NewUlid();
+        const string profileWithMarker = "http://hl7.org/fhir/StructureDefinition/bp#transient-once";
+        CanonicalObservationPublication p = CanonicalObservationPublication.StartPublication(c1, "m-ulid-like", profileWithMarker, null);
+        p.State.ShouldBe(CanonicalPublicationState.Failed);
+        Ulid c2 = Ulid.NewUlid();
+        p.RetryPublication(c2, null);
+        p.State.ShouldBe(CanonicalPublicationState.Published);
+        p.AttemptCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Transient_fail_via_fhir_profile_query_then_retry_succeeds()
+    {
+        Ulid c1 = Ulid.NewUlid();
+        const string profileWithMarker = "http://hl7.org/fhir/StructureDefinition/bp?transient-once=1";
+        CanonicalObservationPublication p = CanonicalObservationPublication.StartPublication(c1, "m-ulid-like", profileWithMarker, null);
+        p.State.ShouldBe(CanonicalPublicationState.Failed);
+        Ulid c2 = Ulid.NewUlid();
+        p.RetryPublication(c2, null);
+        p.State.ShouldBe(CanonicalPublicationState.Published);
+    }
 }

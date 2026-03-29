@@ -16,5 +16,5 @@ fi
 echo "OK — gateway responded. Next:"
 echo "  1. Postgres: start platform/RealtimePlatform.AppHost (Aspire) or local PostgreSQL on PGHOST/PGPORT"
 echo "  2. ApiGateway + DeviceRegistry, TreatmentSession, MeasurementAcquisition, RealtimeDelivery, QueryReadModel (ports in gateway appsettings ReverseProxy)"
-echo "  3. pdms-web: npm run dev (see clients/pdms-web/.env.example — align VITE_APP_TENANT_ID with simulate-gateway --tenant)"
-echo "  4. ./scripts/run-simulation-gateway-cli.sh --tenant <tenant> scenario run"
+echo "  3. pdms-web: npm run dev (see clients/pdms-web/.env.example — align VITE_APP_TENANT_ID with SIMULATION_GATEWAY_TENANT)"
+echo "  4. SIMULATION_GATEWAY_TENANT=<tenant> ./scripts/run-simulation-gateway-cli.sh"

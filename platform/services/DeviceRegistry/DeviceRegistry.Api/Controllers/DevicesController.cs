@@ -64,10 +64,12 @@ public sealed class DevicesController : ControllerBase
             RegisterDeviceResult result = await _sender.SendAsync(command, cancellationToken)
                 .ConfigureAwait(false);
             var body = new RegisterDeviceResponse(result.AggregateId, result.DeviceId, result.TrustState);
-            return CreatedAtAction(
-                nameof(GetTrustAsync),
-                new { version = "1", deviceId = result.DeviceId },
-                body);
+            // Avoid CreatedAtAction here: URL segment API versioning + link generation often throws
+            // "No route matches the supplied values" (CreatedAtActionResult.OnFormatting).
+            string pathBase = Request.PathBase.Value ?? string.Empty;
+            string postPath = (Request.Path.Value ?? string.Empty).TrimEnd('/');
+            string location = $"{pathBase}{postPath}/{Uri.EscapeDataString(result.DeviceId)}/trust";
+            return Created(location, body);
         }
         catch (InvalidOperationException)
         {
