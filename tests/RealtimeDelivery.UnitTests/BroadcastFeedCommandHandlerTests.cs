@@ -40,6 +40,10 @@ public sealed class BroadcastFeedCommandHandlerTests
         sessionPayload.TreatmentSessionId.ShouldBe("session-99");
         sessionPayload.Summary.ShouldBe("MAP snapshot");
         sessionPayload.OccurredAtUtc.ShouldBe(when);
+        sessionPayload.VitalsByChannel.ShouldBeNull();
+        sessionPayload.PatientDisplayLabel.ShouldBeNull();
+        sessionPayload.SessionStateHint.ShouldBeNull();
+        sessionPayload.LinkedDeviceIdHint.ShouldBeNull();
 
         audit.Records.Count.ShouldBe(1);
         AuditRecordRequest r = audit.Records[0];
@@ -49,6 +53,68 @@ public sealed class BroadcastFeedCommandHandlerTests
         r.UserId.ShouldBe("user-42");
         r.TenantId.ShouldBe("tenant-rd");
         r.CorrelationId.ShouldBe(correlationId.ToString());
+    }
+
+    [Fact]
+    public async Task BroadcastSession_forwards_optional_vitals_dictionaryAsync()
+    {
+        var gateway = new FakeRealtimeFeedGateway();
+        var audit = new CapturingAuditRecorder();
+        var tenant = new StubTenantContext { TenantId = "tenant-rd" };
+        var handler = new BroadcastSessionFeedCommandHandler(gateway, audit, tenant);
+        Ulid correlationId = Ulid.NewUlid();
+        DateTimeOffset when = DateTimeOffset.Parse("2026-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+        IReadOnlyDictionary<string, double> vitals = new Dictionary<string, double>
+        {
+            ["map"] = 82.5,
+            ["heart-rate"] = 74,
+            ["spo2"] = 97,
+        };
+        var cmd = new BroadcastSessionFeedCommand(
+            correlationId,
+            "session-100",
+            "Simulation.VitalsTrend",
+            "Vitals sample",
+            when,
+            "user-42",
+            vitals);
+
+        await handler.HandleAsync(cmd);
+
+        SessionFeedPayload sessionPayload = gateway.LastSessionPayload.ShouldNotBeNull();
+        IReadOnlyDictionary<string, double> forwarded = sessionPayload.VitalsByChannel.ShouldNotBeNull();
+        forwarded["map"].ShouldBe(82.5);
+        forwarded["heart-rate"].ShouldBe(74);
+        forwarded["spo2"].ShouldBe(97);
+    }
+
+    [Fact]
+    public async Task BroadcastSession_forwards_optional_patient_preview_hintsAsync()
+    {
+        var gateway = new FakeRealtimeFeedGateway();
+        var audit = new CapturingAuditRecorder();
+        var tenant = new StubTenantContext { TenantId = "tenant-rd" };
+        var handler = new BroadcastSessionFeedCommandHandler(gateway, audit, tenant);
+        Ulid correlationId = Ulid.NewUlid();
+        DateTimeOffset when = DateTimeOffset.Parse("2026-03-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
+        var cmd = new BroadcastSessionFeedCommand(
+            correlationId,
+            "session-101",
+            "Simulation.PatientContext",
+            "Patient preview tick",
+            when,
+            "user-42",
+            null,
+            "SIM-MRN-abc123 · stream 3",
+            "Monitoring",
+            "dev-xyz");
+
+        await handler.HandleAsync(cmd);
+
+        SessionFeedPayload sessionPayload = gateway.LastSessionPayload.ShouldNotBeNull();
+        sessionPayload.PatientDisplayLabel.ShouldBe("SIM-MRN-abc123 · stream 3");
+        sessionPayload.SessionStateHint.ShouldBe("Monitoring");
+        sessionPayload.LinkedDeviceIdHint.ShouldBe("dev-xyz");
     }
 
     [Fact]

@@ -37,8 +37,10 @@ Open **Run → Edit Configurations…** for `Simulation.GatewayCli`. Use profile
 | `SIMULATION_GATEWAY_VERBOSE` | Truthy (`1` / `true` / `yes`) — log request URLs to stderr. |
 | `SIMULATION_GATEWAY_INGEST_PREFIX` | Prefix for generated resource names (overrides scenario prefix). |
 | `SIMULATION_SCENARIO_PREFIX` | Prefix if `SIMULATION_GATEWAY_INGEST_PREFIX` unset; if both unset, default `sim`. |
+| `SIMULATION_VITALS_STREAM_INTERVAL_MS` | After ingest, repeat every *n* ms: vitals measurement POSTs, `sessionFeed` (vitals + patient hints for pdms-web), and tenant `alertFeed`. Omit or `0` to exit after one ingest (unless continuous flag below). |
+| `SIMULATION_CONTINUOUS_LIVE_STREAM` | If `SIMULATION_VITALS_STREAM_INTERVAL_MS` is **unset**, truthy values enable the same loop at **2000** ms (dashboard realtime without remembering the variable). |
 
-**Stdout:** one JSON summary (camelCase) at the end — `treatmentSessionId`, `medicalRecordNumber`, `deviceIdentifier`, measurement and report IDs, audit/provenance IDs, etc. (see `ComprehensiveRelationalIngest.Summary`).
+**Stdout:** one JSON summary (camelCase) when the full ingest completes — `treatmentSessionId`, `medicalRecordNumber`, `deviceIdentifier`, etc. (see `ComprehensiveRelationalIngest.Summary`). If a stream interval is active, the process keeps running until Ctrl+C.
 
 ## Prerequisites
 

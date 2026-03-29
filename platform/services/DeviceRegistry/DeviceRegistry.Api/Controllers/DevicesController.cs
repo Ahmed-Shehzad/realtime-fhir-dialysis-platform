@@ -7,8 +7,6 @@ using BuildingBlocks.Correlation;
 
 using DeviceRegistry.Application.Commands.RegisterDevice;
 
-using DeviceRegistry.Domain.Abstractions;
-
 using Intercessor.Abstractions;
 
 using Microsoft.AspNetCore.Authorization;
@@ -17,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace DeviceRegistry.Api.Controllers;
 
 /// <summary>
-/// Device onboarding and trust API (v1).
+/// Device registration API (v1).
 /// </summary>
 [ApiController]
 [ApiVersion(1.0)]
@@ -25,16 +23,14 @@ namespace DeviceRegistry.Api.Controllers;
 public sealed class DevicesController : ControllerBase
 {
     private readonly ISender _sender;
-    private readonly ITrustLookup _trustLookup;
     private readonly ICorrelationIdAccessor _correlation;
 
     /// <summary>
     /// Creates the controller.
     /// </summary>
-    public DevicesController(ISender sender, ITrustLookup trustLookup, ICorrelationIdAccessor correlation)
+    public DevicesController(ISender sender, ICorrelationIdAccessor correlation)
     {
         _sender = sender ?? throw new ArgumentNullException(nameof(sender));
-        _trustLookup = trustLookup ?? throw new ArgumentNullException(nameof(trustLookup));
         _correlation = correlation ?? throw new ArgumentNullException(nameof(correlation));
     }
 
@@ -75,22 +71,5 @@ public sealed class DevicesController : ControllerBase
         {
             return Conflict();
         }
-    }
-
-    /// <summary>
-    /// Returns whether the device exists and is trusted (active).
-    /// </summary>
-    [HttpGet("{deviceId}/trust")]
-    [Authorize(Policy = PlatformAuthorizationPolicies.DevicesRead)]
-    [ProducesResponseType(typeof(DeviceTrustResponse), StatusCodes.Status200OK)]
-    public async Task<ActionResult<DeviceTrustResponse>> GetTrustAsync(
-        string deviceId,
-        CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(deviceId);
-        bool trusted = await _trustLookup
-            .IsDeviceTrustedAsync(new BuildingBlocks.ValueObjects.DeviceId(deviceId), cancellationToken)
-            .ConfigureAwait(false);
-        return Ok(new DeviceTrustResponse(deviceId, trusted));
     }
 }

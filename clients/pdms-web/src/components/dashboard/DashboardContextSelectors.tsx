@@ -4,6 +4,7 @@ import { useSession } from '../../auth/useSession'
 import { sessionOverviewRoles } from '../../auth/rolePolicies'
 import { useAlertProjectionsQuery } from '../../hooks/useAlertProjectionsQuery'
 import { useDashboardSummaryQuery } from '../../hooks/useDashboardSummaryQuery'
+import { normalizeTreatmentSessionId } from '../../lib/normalizeTreatmentSessionId'
 
 const SEVERITY_FILTER_OPTIONS: readonly { value: string; label: string }[] = [
   { value: '', label: 'All severities' },
@@ -21,7 +22,7 @@ const SEVERITY_FILTER_OPTIONS: readonly { value: string; label: string }[] = [
 export function DashboardContextSelectors(): ReactElement {
   const { roles } = useSession()
   const [searchParams, setSearchParams] = useSearchParams()
-  const sessionIdFromUrl = searchParams.get('sessionId') ?? ''
+  const sessionIdFromUrl = normalizeTreatmentSessionId(searchParams.get('sessionId'))
   const patientIdFromUrl = searchParams.get('patientId') ?? ''
 
   const hasReadModelRole = sessionOverviewRoles.some((r) => roles.includes(r))
@@ -38,21 +39,22 @@ export function DashboardContextSelectors(): ReactElement {
   const sessionOptions = useMemo(() => {
     const ids = new Set<string>()
     for (const row of alertsQuery.data ?? []) {
-      const sid = row.treatmentSessionId?.trim()
+      const sid = normalizeTreatmentSessionId(row.treatmentSessionId)
       if (sid) {
         ids.add(sid)
       }
     }
-    if (sessionIdFromUrl.trim()) {
-      ids.add(sessionIdFromUrl.trim())
+    if (sessionIdFromUrl) {
+      ids.add(sessionIdFromUrl)
     }
     return [...ids].sort((a, b) => a.localeCompare(b))
   }, [alertsQuery.data, sessionIdFromUrl])
 
   const onSessionChange = (nextSessionId: string) => {
     const next = new URLSearchParams(searchParams)
-    if (nextSessionId.trim()) {
-      next.set('sessionId', nextSessionId.trim())
+    const canonical = normalizeTreatmentSessionId(nextSessionId)
+    if (canonical) {
+      next.set('sessionId', canonical)
     } else {
       next.delete('sessionId')
     }

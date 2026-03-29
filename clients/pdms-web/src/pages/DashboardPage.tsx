@@ -23,8 +23,11 @@ import {
 } from '../components/VitalsTrendChart'
 import type { VitalPoint } from '../components/VitalsLineChart'
 import { runtimeConfig } from '../config/runtimeConfig'
+import { normalizeTreatmentSessionId } from '../lib/normalizeTreatmentSessionId'
 import { useBackendHealthQuery } from '../hooks/useBackendHealthQuery'
 import { useFinancialTimelineQuery } from '../hooks/useFinancialTimelineQuery'
+import { useLiveVitalsTrendFromSessionFeed } from '../hooks/useLiveVitalsTrendFromSessionFeed'
+import { useSessionFeedTailQuery } from '../hooks/useSessionFeedTailQuery'
 import { useSessionOverviewQuery } from '../hooks/useSessionOverviewQuery'
 
 function buildDemoVitalsMultiSeries(): VitalSeriesDefinition[] {
@@ -57,14 +60,16 @@ function buildDemoVitalsMultiSeries(): VitalSeriesDefinition[] {
 export default function DashboardPage(): ReactElement {
   const { roles } = useSession()
   const [searchParams] = useSearchParams()
-  const sessionIdFromUrl = searchParams.get('sessionId') ?? ''
+  const sessionIdFromUrl = normalizeTreatmentSessionId(searchParams.get('sessionId'))
   const patientIdFromUrl = searchParams.get('patientId') ?? ''
 
   const healthQuery = useBackendHealthQuery()
   const showRealtimeFeedUi =
     import.meta.env.DEV || realtimeFeedRoles.some((r) => roles.includes(r))
   const hasSessionOverviewRole = sessionOverviewRoles.some((r) => roles.includes(r))
-  const sessionOverviewQuery = useSessionOverviewQuery(sessionIdFromUrl || null, hasSessionOverviewRole)
+  const hasClinicalPhiRole = clinicalPhiRoles.some((r) => roles.includes(r))
+  const sessionOverviewQueryEnabled = hasSessionOverviewRole || hasClinicalPhiRole
+  const sessionOverviewQuery = useSessionOverviewQuery(sessionIdFromUrl || null, sessionOverviewQueryEnabled)
 
   const hasFinancialRole = financialTimelineRoles.some((r) => roles.includes(r))
   const financialQuery = useFinancialTimelineQuery(
@@ -74,6 +79,9 @@ export default function DashboardPage(): ReactElement {
   )
 
   const demoVitalsSeries = useMemo(() => buildDemoVitalsMultiSeries(), [])
+  const sessionFeedForVitalsQuery = useSessionFeedTailQuery(sessionIdFromUrl)
+  const liveVitalsSeries = useLiveVitalsTrendFromSessionFeed(sessionIdFromUrl, sessionFeedForVitalsQuery.data)
+  const vitalsSeries = liveVitalsSeries ?? demoVitalsSeries
 
   const envBadge = import.meta.env.PROD ? 'production' : 'development'
 
@@ -159,13 +167,25 @@ export default function DashboardPage(): ReactElement {
                 Vitals trend
               </h2>
               <p className="mt-1 max-w-3xl text-sm text-slate-600">
-                Multi-series demo (Bokeh-style): dual Y-axes when units differ, grid, zoom/pan, hover crosshair + tooltip,
-                and a toggleable legend. Wire to Observation / canonical feed when available. SVG exposes{' '}
-                <code className="rounded bg-slate-100 px-1">role=&quot;img&quot;</code> and a descriptive{' '}
+                Multi-series (Bokeh-style): dual Y-axes when units differ, grid, zoom/pan, hover crosshair + tooltip,
+                and a toggleable legend. Continuous ingest: each simulator tick POSTs measurements and one{' '}
+                <span className="font-mono text-xs">sessionFeed</span> event (<span className="font-mono text-xs">
+                  Simulation.VitalsTrend
+                </span>
+                , <span className="font-mono text-xs">vitalsByChannel</span>) — run{' '}
+                <code className="rounded bg-slate-100 px-1">simulate-gateway</code> with{' '}
+                <code className="rounded bg-slate-100 px-1">SIMULATION_VITALS_STREAM_INTERVAL_MS</code> or{' '}
+                <code className="rounded bg-slate-100 px-1">SIMULATION_CONTINUOUS_LIVE_STREAM=1</code>, paste{' '}
+                <span className="font-mono text-xs">treatmentSessionId</span> into <span className="font-mono text-xs">
+                  ?sessionId=
+                </span>
+                . SVG exposes <code className="rounded bg-slate-100 px-1">role=&quot;img&quot;</code> and{' '}
                 <code className="rounded bg-slate-100 px-1">aria-label</code>.
               </p>
               <p className="mt-2 text-xs text-slate-500">
-                Sample data only — session / patient selectors drive read-model and financial panels, not this chart.
+                {liveVitalsSeries
+                  ? 'Live data from ClinicalFeedHub session feed (vitalsByChannel).'
+                  : 'Sample data until vitals stream events arrive for the selected session.'}
                 {sessionIdFromUrl ? (
                   <>
                     {' '}
@@ -175,9 +195,15 @@ export default function DashboardPage(): ReactElement {
               </p>
               <div className="mt-4">
                 <VitalsTrendChart
-                  series={demoVitalsSeries}
+                  key={`vitals-${sessionIdFromUrl}-${liveVitalsSeries ? 'live' : 'demo'}`}
+                  series={vitalsSeries}
+                  resetZoomWhenTimeExtentGrows={liveVitalsSeries != null}
                   title="Hemodynamics & oxygenation (simulated session)"
-                  subtitle="With three unit types visible, one shared Y scale spans all traces (read units in the tooltip). Exactly two unit types use independent left and right axes."
+                  subtitle={
+                    liveVitalsSeries
+                      ? 'Realtime points from SignalR sessionFeed (MAP, heart rate, SpO₂). Scroll/pan as needed.'
+                      : 'With three unit types visible, one shared Y scale spans all traces (read units in the tooltip). Exactly two unit types use independent left and right axes.'
+                  }
                 />
               </div>
             </section>
@@ -222,14 +248,18 @@ export default function DashboardPage(): ReactElement {
                   Patient context (preview)
                 </h2>
                 <p className="mt-2 text-sm text-slate-700">
-                  Wire to FHIR <code className="rounded bg-slate-100 px-1">Patient</code> after auth. Session
-                  overview above may include a display label when projection allows.
+                  Wire to FHIR <code className="rounded bg-slate-100 px-1">Patient</code> after auth. The same continuous
+                  simulator tick sends <code className="rounded bg-slate-100 px-1">patientDisplayLabel</code>,{' '}
+                  <code className="rounded bg-slate-100 px-1">sessionStateHint</code>, and{' '}
+                  <code className="rounded bg-slate-100 px-1">linkedDeviceIdHint</code> on{' '}
+                  <code className="rounded bg-slate-100 px-1">sessionFeed</code> — merged into this strip in realtime (plus
+                  read-model session overview when available).
                 </p>
                 <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <dt className="text-slate-500">MRN</dt>
                     <dd className="font-medium">
-                      {sessionOverviewQuery.isSuccess && sessionOverviewQuery.data?.patientDisplayLabel
+                      {sessionOverviewQuery.data?.patientDisplayLabel
                         ? sessionOverviewQuery.data.patientDisplayLabel
                         : '**** (masked)'}
                     </dd>
@@ -238,6 +268,24 @@ export default function DashboardPage(): ReactElement {
                     <dt className="text-slate-500">Active session</dt>
                     <dd className="font-mono text-xs font-medium break-all">
                       {sessionIdFromUrl || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Session state</dt>
+                    <dd className="font-medium">{sessionOverviewQuery.data?.sessionState ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Linked device</dt>
+                    <dd className="font-mono text-xs font-medium break-all">
+                      {sessionOverviewQuery.data?.linkedDeviceId ?? '—'}
+                    </dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-slate-500">Last feed merge (UTC)</dt>
+                    <dd className="font-mono text-xs text-slate-700">
+                      {sessionOverviewQuery.data?.projectionUpdatedAtUtc
+                        ? new Date(sessionOverviewQuery.data.projectionUpdatedAtUtc).toISOString()
+                        : '—'}
                     </dd>
                   </div>
                 </dl>

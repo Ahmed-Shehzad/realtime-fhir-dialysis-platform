@@ -48,7 +48,11 @@ public sealed class DeliveryBroadcastController : ControllerBase
                     request.EventType,
                     request.Summary,
                     request.OccurredAtUtc,
-                    principalId),
+                    principalId,
+                    request.VitalsByChannel,
+                    request.PatientDisplayLabel,
+                    request.SessionStateHint,
+                    request.LinkedDeviceIdHint),
                 cancellationToken)
             .ConfigureAwait(false);
         return NoContent();
@@ -89,7 +93,11 @@ public sealed record BroadcastSessionFeedRequest(
     string TreatmentSessionId,
     string EventType,
     string Summary,
-    [property: JsonRequired] DateTimeOffset OccurredAtUtc);
+    [property: JsonRequired] DateTimeOffset OccurredAtUtc,
+    Dictionary<string, double>? VitalsByChannel = null,
+    string? PatientDisplayLabel = null,
+    string? SessionStateHint = null,
+    string? LinkedDeviceIdHint = null);
 
 public sealed record BroadcastAlertFeedRequest(
     string EventType,

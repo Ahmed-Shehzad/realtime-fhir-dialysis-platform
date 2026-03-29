@@ -50,7 +50,59 @@ internal static class ComprehensiveRelationalIngest
         bool ReadModelProjectionsUpserted,
         bool FinancialChainExecuted);
 
-    public static async Task<Summary> RunAsync(
+    private sealed record BootstrapResult(
+        CreateThresholdProfileResponseDto Threshold,
+        string RuleSetId,
+        string SessionId);
+
+    private sealed record ParallelWaveOutcome(
+        RecordPlatformAuditFactResponseDto AuditPrimary,
+        string SurveillanceAlertId,
+        string? RuleEvaluationAlertId,
+        string PrimaryWorkflowId,
+        string SessionAnalysisId,
+        string ReportId);
+
+    private sealed record AuxiliaryWorkflowStarts(
+        WorkflowStartResponseDto Aux2,
+        WorkflowStartResponseDto Aux3,
+        WorkflowStartResponseDto Aux4,
+        WorkflowStartResponseDto Aux5);
+
+    private sealed record FinancialChainIds(string? RegistrationId, string? InquiryId, string? ClaimId);
+
+    private sealed record AuditProvenanceOutcome(string? PrimaryFactId, string? SecondaryFactId, string? LinkId);
+
+    private sealed record SyntheticPublicationDrillContext(
+        string Prefix,
+        string DeviceIdentifier,
+        string SessionId,
+        string MidHr);
+
+    private sealed record ParallelWaveContext(
+        string DeviceIdentifier,
+        string SessionId,
+        string MidMap,
+        string MidHr,
+        string Mrn);
+
+    private sealed record FinancialChainRunContext(
+        string Prefix,
+        string Mrn,
+        string SessionId,
+        bool SkipFinancialChain);
+
+    private sealed record ReadModelDeliveryContext(
+        string DeviceIdentifier,
+        string Mrn,
+        string SessionId,
+        string AlertRowKey,
+        bool SkipReadModelProjections,
+        bool SkipProjectionRebuild);
+
+    private sealed record AuditProvenanceFollowUpContext(string SessionId, string Mrn, string AlertRowKey);
+
+    public async static Task<Summary> RunAsync(
         GlobalOptions g,
         string prefix,
         bool skipReadModelProjections,
@@ -75,6 +127,302 @@ internal static class ComprehensiveRelationalIngest
 
         await Console.Error.WriteLineAsync($"Comprehensive gateway ingest — {baseUri} (API v{v})").ConfigureAwait(false);
 
+        BootstrapResult boot = await RunBootstrapThroughSessionStartAsync(client, v, g, deviceIdentifier, mrn, cancellationToken).ConfigureAwait(false);
+        CreateThresholdProfileResponseDto threshold = boot.Threshold;
+        string ruleSetId = boot.RuleSetId;
+        string sessionId = boot.SessionId;
+
+        (string midMap, string midHr) = await IngestVitalsPairAsync(client, v, g, deviceIdentifier, cancellationToken).ConfigureAwait(false);
+
+        await RunDualMeasurementDerivationAsync(client, v, g, ruleSetId, midMap, midHr, cancellationToken).ConfigureAwait(false);
+
+        await ResolveSessionMeasurementContextsAsync(client, v, g, sessionId, midMap, midHr, cancellationToken).ConfigureAwait(false);
+
+        await RunSyntheticPublicationRetryIngestAndUnresolvedDrillAsync(
+                client,
+                v,
+                g,
+                new SyntheticPublicationDrillContext(prefix, deviceIdentifier, sessionId, midHr),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        ParallelWaveOutcome wave = await RunCrossServiceParallelWaveAsync(
+                client,
+                v,
+                g,
+                new ParallelWaveContext(deviceIdentifier, sessionId, midMap, midHr, mrn),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        AuxiliaryWorkflowStarts aux = await StartFourAuxiliaryWorkflowsAsync(client, v, g, sessionId, cancellationToken)
+            .ConfigureAwait(false);
+
+        await AdvanceAndCompletePrimaryWorkflowAsync(client, v, g, wave.PrimaryWorkflowId, cancellationToken)
+            .ConfigureAwait(false);
+
+        await RunAuxiliaryWorkflowTerminalMutationsAsync(client, v, g, aux, cancellationToken).ConfigureAwait(false);
+
+        await RunSurveillanceAckEscalateResolveAsync(client, v, g, wave.SurveillanceAlertId, cancellationToken)
+            .ConfigureAwait(false);
+
+        await RunReportingFinalizeAndPublishAsync(client, v, g, wave.ReportId, cancellationToken).ConfigureAwait(false);
+
+        FinancialChainIds financialIds = await RunFinancialChainIfEnabledAsync(
+                client,
+                v,
+                g,
+                new FinancialChainRunContext(prefix, mrn, sessionId, skipFinancialChain),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        bool readModelDone = await RunReadModelAndDeliveryIfEnabledAsync(
+                client,
+                v,
+                g,
+                new ReadModelDeliveryContext(
+                    deviceIdentifier,
+                    mrn,
+                    sessionId,
+                    alertRowKey,
+                    skipReadModelProjections,
+                    skipProjectionRebuild),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        AuditProvenanceOutcome provenance = await RunAuditProvenanceFollowUpIfNeededAsync(
+                client,
+                v,
+                g,
+                new AuditProvenanceFollowUpContext(sessionId, mrn, alertRowKey),
+                wave.AuditPrimary,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await RunReplayRecoverySequenceIfEnabledAsync(client, v, g, skipReplayRecovery, cancellationToken)
+            .ConfigureAwait(false);
+
+        await RunStepAsync(
+                "session: complete",
+                async () =>
+                {
+                    HttpResponseMessage r = await GatewayHttp.SendPostWithoutBodyAsync(
+                            client,
+                            GatewayApiPaths.SessionComplete(v, sessionId),
+                            g.TraceHttp,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    await GatewayHttp.WriteResultAsync(r, cancellationToken, writeSuccessBodyToStdout: false)
+                        .ConfigureAwait(false);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return new Summary(
+            deviceIdentifier,
+            mrn,
+            sessionId,
+            threshold.ProfileId,
+            ruleSetId,
+            midMap,
+            midHr,
+            wave.SurveillanceAlertId,
+            wave.RuleEvaluationAlertId,
+            wave.PrimaryWorkflowId,
+            wave.SessionAnalysisId,
+            wave.ReportId,
+            financialIds.RegistrationId,
+            financialIds.InquiryId,
+            financialIds.ClaimId,
+            provenance.PrimaryFactId,
+            provenance.SecondaryFactId,
+            provenance.LinkId,
+            alertRowKey,
+            readModelDone,
+            !skipFinancialChain);
+    }
+
+    /// <summary>
+    /// On each tick: ingests vitals, POSTs <c>/delivery/broadcast/session</c> (<c>vitalsByChannel</c>, <c>Simulation.VitalsTrend</c>),
+    /// then POSTs <c>/delivery/broadcast/alert</c> so <c>JoinTenantAlerts</c> clients receive <c>alertFeed</c> events.
+    /// </summary>
+    public async static Task StreamVitalsTrendLoopAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        Summary session,
+        TimeSpan tickInterval,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(g);
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(tickInterval, TimeSpan.Zero);
+
+        int tick = 0;
+        await Console.Error.WriteLineAsync(
+                $"Live stream — vitals ingest + sessionFeed (VitalsTrend, patient hints), tenant alertFeed: "
+                + $"every {tickInterval.TotalMilliseconds:0} ms for session {session.TreatmentSessionId} (Ctrl+C to stop).")
+            .ConfigureAwait(false);
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(tickInterval, cancellationToken).ConfigureAwait(false);
+            double mapMmHg = 72 + Math.Sin(tick / 4d) * 10 + tick * 0.12 + (tick > 22 ? (tick - 22) * 0.8 : 0);
+            double bpm = 68 + Math.Sin(tick / 2.5) * 12 + (tick % 5) * 2;
+            double spo2 = 97 + Math.Sin(tick / 6d) * 1.2 - (tick > 26 ? (tick - 26) * 0.15 : 0);
+            var sample = new SimulatedVitalsSample(mapMmHg, bpm, spo2);
+            await PostVitalsSamplesAndBroadcastAsync(client, v, g, session, sample, tick, cancellationToken)
+                .ConfigureAwait(false);
+            tick++;
+        }
+    }
+
+    private const string VitalsTrendEventType = "Simulation.VitalsTrend";
+
+    private readonly record struct SimulatedVitalsSample(double MapMmHg, double Bpm, double Spo2);
+
+    private async static Task PostVitalsSamplesAndBroadcastAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        Summary session,
+        SimulatedVitalsSample sample,
+        int streamTickIndex,
+        CancellationToken cancellationToken)
+    {
+        const string measurementTypeVitals = "simulation.vitals";
+        const string schemaVersion = "1";
+        string deviceId = session.DeviceIdentifier;
+        string sessionId = session.TreatmentSessionId;
+        string payloadMap = JsonSerializer.Serialize(
+            new { mapMmHg = Math.Round(sample.MapMmHg, 2), context = "stream" },
+            GatewayHttp.JsonWriteOptions);
+        string payloadHr = JsonSerializer.Serialize(
+            new { bpm = Math.Round(sample.Bpm, 2), context = "stream" },
+            GatewayHttp.JsonWriteOptions);
+        string payloadSpo2 = JsonSerializer.Serialize(
+            new { percent = Math.Round(sample.Spo2, 2), context = "stream" },
+            GatewayHttp.JsonWriteOptions);
+
+        _ = await Task.WhenAll(
+                GatewayHttp.PostJsonReadAsync<IngestMeasurementResponseDto>(
+                    client,
+                    GatewayApiPaths.Measurements(v),
+                    new
+                    {
+                        deviceIdentifier = deviceId,
+                        channel = "map",
+                        measurementType = measurementTypeVitals,
+                        schemaVersion,
+                        rawPayloadJson = payloadMap,
+                    },
+                    cancellationToken,
+                    g.TraceHttp),
+                GatewayHttp.PostJsonReadAsync<IngestMeasurementResponseDto>(
+                    client,
+                    GatewayApiPaths.Measurements(v),
+                    new
+                    {
+                        deviceIdentifier = deviceId,
+                        channel = "heart-rate",
+                        measurementType = measurementTypeVitals,
+                        schemaVersion,
+                        rawPayloadJson = payloadHr,
+                    },
+                    cancellationToken,
+                    g.TraceHttp),
+                GatewayHttp.PostJsonReadAsync<IngestMeasurementResponseDto>(
+                    client,
+                    GatewayApiPaths.Measurements(v),
+                    new
+                    {
+                        deviceIdentifier = deviceId,
+                        channel = "spo2",
+                        measurementType = measurementTypeVitals,
+                        schemaVersion,
+                        rawPayloadJson = payloadSpo2,
+                    },
+                    cancellationToken,
+                    g.TraceHttp))
+            .ConfigureAwait(false);
+
+        var vitalsByChannel = new Dictionary<string, double>(StringComparer.Ordinal)
+        {
+            ["map"] = sample.MapMmHg,
+            ["heart-rate"] = sample.Bpm,
+            ["spo2"] = sample.Spo2,
+        };
+
+        string sessionStateHint = streamTickIndex % 4 < 2 ? "Active" : "Monitoring";
+        string patientDisplayLabel = $"{session.MedicalRecordNumber} · stream {streamTickIndex}";
+        HttpResponseMessage broadcast = await GatewayHttp.PostJsonAsync(
+                client,
+                GatewayApiPaths.DeliveryBroadcastSession(v),
+                new
+                {
+                    treatmentSessionId = sessionId,
+                    eventType = VitalsTrendEventType,
+                    summary =
+                        $"MAP {sample.MapMmHg:0.#} mmHg, HR {sample.Bpm:0.#} /min, SpO₂ {sample.Spo2:0.#} % (simulator stream)",
+                    occurredAtUtc = DateTimeOffset.UtcNow,
+                    vitalsByChannel,
+                    patientDisplayLabel,
+                    sessionStateHint,
+                    linkedDeviceIdHint = deviceId,
+                },
+                cancellationToken,
+                g.TraceHttp)
+            .ConfigureAwait(false);
+        await GatewayHttp.ExpectNoContentAsync(broadcast, cancellationToken).ConfigureAwait(false);
+
+        await PostTenantAlertStreamBroadcastAsync(client, v, g, session, sample, streamTickIndex, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private const string TenantAlertStreamEventVitalsCorrelation = "Simulation.TenantAlert.VitalsCorrelation";
+    private const string TenantAlertStreamEventPulse = "Simulation.TenantAlert.StreamPulse";
+
+    private async static Task PostTenantAlertStreamBroadcastAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        Summary session,
+        SimulatedVitalsSample sample,
+        int streamTickIndex,
+        CancellationToken cancellationToken)
+    {
+        string sessionId = session.TreatmentSessionId;
+        string alertId = $"{session.DeliveryAlertRowKey}-stream-{streamTickIndex}";
+        bool pulseOnly = streamTickIndex % 3 == 0;
+        string eventType = pulseOnly ? TenantAlertStreamEventPulse : TenantAlertStreamEventVitalsCorrelation;
+        string severity = sample.MapMmHg >= 82 ? "High" : sample.MapMmHg <= 68 ? "Low" : "Medium";
+        string lifecycleState = pulseOnly ? "Active" : streamTickIndex % 2 == 0 ? "Active" : "Acknowledged";
+        HttpResponseMessage r = await GatewayHttp.PostJsonAsync(
+                client,
+                GatewayApiPaths.DeliveryBroadcastAlert(v),
+                new
+                {
+                    eventType,
+                    treatmentSessionId = sessionId,
+                    alertId,
+                    severity,
+                    lifecycleState,
+                    occurredAtUtc = DateTimeOffset.UtcNow,
+                },
+                cancellationToken,
+                g.TraceHttp)
+            .ConfigureAwait(false);
+        await GatewayHttp.ExpectNoContentAsync(r, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async static Task<BootstrapResult> RunBootstrapThroughSessionStartAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        string deviceIdentifier,
+        string mrn,
+        CancellationToken cancellationToken)
+    {
         string profileCode = $"{SimulationProfileCodePrefix}{Ulid.NewUlid().ToString()[..10]}";
         CreateThresholdProfileResponseDto threshold = await RunJsonStepAsync(
                 "admin: create threshold profile",
@@ -183,6 +531,16 @@ internal static class ComprehensiveRelationalIngest
                 cancellationToken)
             .ConfigureAwait(false);
 
+        return new BootstrapResult(threshold, ruleSetId, sessionId);
+    }
+
+    private async static Task<(string MidMap, string MidHr)> IngestVitalsPairAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        string deviceIdentifier,
+        CancellationToken cancellationToken)
+    {
         const string channelMap = "map";
         const string channelHr = "heart-rate";
         const string measurementTypeVitals = "simulation.vitals";
@@ -232,10 +590,20 @@ internal static class ComprehensiveRelationalIngest
         }
 
         await Console.Error.WriteLineAsync("  OK (2 measurements)").ConfigureAwait(false);
+        return (ingestMap.MeasurementId, ingestHr.MeasurementId);
+    }
 
-        string midMap = ingestMap.MeasurementId;
-        string midHr = ingestHr.MeasurementId;
-
+    private async static Task RunDualMeasurementDerivationAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        string ruleSetId,
+        string midMap,
+        string midHr,
+        CancellationToken cancellationToken)
+    {
+        const string channelMap = "map";
+        const string channelHr = "heart-rate";
         await Console.Error.WriteLineAsync("→ parallel: per-measurement validation / conditioning / canonical…").ConfigureAwait(false);
         try
         {
@@ -262,7 +630,17 @@ internal static class ComprehensiveRelationalIngest
         }
 
         await Console.Error.WriteLineAsync("  OK (2 pipelines)").ConfigureAwait(false);
+    }
 
+    private async static Task ResolveSessionMeasurementContextsAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        string sessionId,
+        string midMap,
+        string midHr,
+        CancellationToken cancellationToken)
+    {
         await Console.Error.WriteLineAsync("→ parallel: session measurement context resolved…").ConfigureAwait(false);
         try
         {
@@ -286,9 +664,20 @@ internal static class ComprehensiveRelationalIngest
         }
 
         await Console.Error.WriteLineAsync("  OK").ConfigureAwait(false);
+    }
 
-        // Synthetic measurement id (not from ingest): domain stub fails first attempt when id contains "transient-once".
-        // Does not depend on JSON body binding for FhirProfileUrl through the gateway.
+    private async static Task RunSyntheticPublicationRetryIngestAndUnresolvedDrillAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        SyntheticPublicationDrillContext drill,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(drill);
+        string prefix = drill.Prefix;
+        string deviceIdentifier = drill.DeviceIdentifier;
+        string sessionId = drill.SessionId;
+        string midHr = drill.MidHr;
         string measurementIdForStubRetry = $"{prefix}-transient-once-{Ulid.NewUlid()}";
         PublishCanonicalObservationResponseDto stubFailForRetry = await RunJsonStepAsync(
                 "clinical: canonical publish (synthetic id, stub transient for retry)",
@@ -301,12 +690,10 @@ internal static class ComprehensiveRelationalIngest
                 cancellationToken)
             .ConfigureAwait(false);
         if (!string.Equals(stubFailForRetry.State, "Failed", StringComparison.Ordinal))
-        {
             throw new InvalidOperationException(
                 "Expected canonical publication State Failed for stub-transient drill (got "
                 + stubFailForRetry.State
                 + "). Restart ClinicalInteroperability.Api with current domain (measurement id or profile transient-once).");
-        }
 
         await RunStepAsync(
                 "clinical: publication retry (synthetic stub)",
@@ -330,6 +717,8 @@ internal static class ComprehensiveRelationalIngest
                 cancellationToken)
             .ConfigureAwait(false);
 
+        const string measurementTypeVitals = "simulation.vitals";
+        const string schemaVersion = "1";
         _ = await RunJsonStepAsync(
                 "measurement: ingest via /measurements/ingest path",
                 GatewayHttp.PostJsonReadAsync<IngestMeasurementResponseDto>(
@@ -363,7 +752,21 @@ internal static class ComprehensiveRelationalIngest
                 },
                 cancellationToken)
             .ConfigureAwait(false);
+    }
 
+    private async static Task<ParallelWaveOutcome> RunCrossServiceParallelWaveAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        ParallelWaveContext waveContext,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(waveContext);
+        string deviceIdentifier = waveContext.DeviceIdentifier;
+        string sessionId = waveContext.SessionId;
+        string midMap = waveContext.MidMap;
+        string midHr = waveContext.MidHr;
+        string mrn = waveContext.Mrn;
         string auditDetailPrimary = JsonSerializer.Serialize(
             new
             {
@@ -374,12 +777,12 @@ internal static class ComprehensiveRelationalIngest
             GatewayHttp.JsonWriteOptions);
 
         await Console.Error.WriteLineAsync("→ parallel: audit / surveillance / terminology / rule / workflow / analytics / reporting.generate…").ConfigureAwait(false);
-        RecordPlatformAuditFactResponseDto? auditPrimary = null;
-        RaiseAlertResponseDto? surveillanceRaise = null;
-        WorkflowStartResponseDto? workflow = null;
-        RunSessionAnalysisResponseDto? analysis = null;
-        GenerateSessionReportResponseDto? report = null;
-        EvaluateRuleResponseDto? ruleEval = null;
+        RecordPlatformAuditFactResponseDto? auditPrimary;
+        RaiseAlertResponseDto? surveillanceRaise;
+        WorkflowStartResponseDto? workflow;
+        RunSessionAnalysisResponseDto? analysis;
+        GenerateSessionReportResponseDto? report;
+        EvaluateRuleResponseDto? ruleEval;
         try
         {
             Task<RecordPlatformAuditFactResponseDto> tAudit = GatewayHttp.PostJsonReadAsync<RecordPlatformAuditFactResponseDto>(
@@ -507,8 +910,22 @@ internal static class ComprehensiveRelationalIngest
         }
 
         await Console.Error.WriteLineAsync("  OK").ConfigureAwait(false);
+        return new ParallelWaveOutcome(
+            auditPrimary!,
+            surveillanceRaise!.AlertId,
+            ruleEval!.AlertId,
+            workflow!.WorkflowInstanceId,
+            analysis!.AnalysisId,
+            report!.ReportId);
+    }
 
-        string primaryWorkflowId = workflow!.WorkflowInstanceId;
+    private async static Task<AuxiliaryWorkflowStarts> StartFourAuxiliaryWorkflowsAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        string sessionId,
+        CancellationToken cancellationToken)
+    {
         await Console.Error.WriteLineAsync("→ parallel: auxiliary workflow starts (SessionCompletion)…").ConfigureAwait(false);
         WorkflowStartResponseDto auxWf2;
         WorkflowStartResponseDto auxWf3;
@@ -553,7 +970,16 @@ internal static class ComprehensiveRelationalIngest
         }
 
         await Console.Error.WriteLineAsync("  OK (4 starts)").ConfigureAwait(false);
+        return new AuxiliaryWorkflowStarts(auxWf2, auxWf3, auxWf4, auxWf5);
+    }
 
+    private async static Task AdvanceAndCompletePrimaryWorkflowAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        string primaryWorkflowId,
+        CancellationToken cancellationToken)
+    {
         await RunStepAsync(
                 "workflow: advance primary",
                 async () =>
@@ -584,7 +1010,15 @@ internal static class ComprehensiveRelationalIngest
                 },
                 cancellationToken)
             .ConfigureAwait(false);
+    }
 
+    private async static Task RunAuxiliaryWorkflowTerminalMutationsAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        AuxiliaryWorkflowStarts aux,
+        CancellationToken cancellationToken)
+    {
         await Console.Error.WriteLineAsync("→ parallel: auxiliary workflow terminal mutations…").ConfigureAwait(false);
         try
         {
@@ -592,7 +1026,7 @@ internal static class ComprehensiveRelationalIngest
             {
                 HttpResponseMessage r = await GatewayHttp.PostJsonAsync(
                         client,
-                        GatewayApiPaths.WorkflowFail(v, auxWf2.WorkflowInstanceId),
+                        GatewayApiPaths.WorkflowFail(v, aux.Aux2.WorkflowInstanceId),
                         new { reason = "Simulation.GatewayCli coverage (fail branch)." },
                         cancellationToken,
                         g.TraceHttp)
@@ -604,7 +1038,7 @@ internal static class ComprehensiveRelationalIngest
             {
                 HttpResponseMessage r = await GatewayHttp.PostJsonAsync(
                         client,
-                        GatewayApiPaths.WorkflowCompensation(v, auxWf3.WorkflowInstanceId),
+                        GatewayApiPaths.WorkflowCompensation(v, aux.Aux3.WorkflowInstanceId),
                         new { reason = "Simulation.GatewayCli coverage (compensation)." },
                         cancellationToken,
                         g.TraceHttp)
@@ -616,7 +1050,7 @@ internal static class ComprehensiveRelationalIngest
             {
                 HttpResponseMessage r = await GatewayHttp.PostJsonAsync(
                         client,
-                        GatewayApiPaths.WorkflowManualIntervention(v, auxWf4.WorkflowInstanceId),
+                        GatewayApiPaths.WorkflowManualIntervention(v, aux.Aux4.WorkflowInstanceId),
                         new { detail = "Simulation.GatewayCli coverage (manual intervention)." },
                         cancellationToken,
                         g.TraceHttp)
@@ -628,7 +1062,7 @@ internal static class ComprehensiveRelationalIngest
             {
                 HttpResponseMessage r = await GatewayHttp.SendPostWithoutBodyAsync(
                         client,
-                        GatewayApiPaths.WorkflowTimeout(v, auxWf5.WorkflowInstanceId),
+                        GatewayApiPaths.WorkflowTimeout(v, aux.Aux5.WorkflowInstanceId),
                         g.TraceHttp,
                         cancellationToken)
                     .ConfigureAwait(false);
@@ -644,8 +1078,15 @@ internal static class ComprehensiveRelationalIngest
         }
 
         await Console.Error.WriteLineAsync("  OK").ConfigureAwait(false);
+    }
 
-        string survAlertId = surveillanceRaise!.AlertId;
+    private async static Task RunSurveillanceAckEscalateResolveAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        string survAlertId,
+        CancellationToken cancellationToken)
+    {
         await RunStepAsync(
                 "surveillance: acknowledge",
                 async () =>
@@ -693,8 +1134,15 @@ internal static class ComprehensiveRelationalIngest
                 },
                 cancellationToken)
             .ConfigureAwait(false);
+    }
 
-        string reportId = report!.ReportId;
+    private async static Task RunReportingFinalizeAndPublishAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        string reportId,
+        CancellationToken cancellationToken)
+    {
         await RunStepAsync(
                 "reporting: finalize",
                 async () =>
@@ -725,7 +1173,20 @@ internal static class ComprehensiveRelationalIngest
                 },
                 cancellationToken)
             .ConfigureAwait(false);
+    }
 
+    private async static Task<FinancialChainIds> RunFinancialChainIfEnabledAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        FinancialChainRunContext chainContext,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(chainContext);
+        string prefix = chainContext.Prefix;
+        string mrn = chainContext.Mrn;
+        string sessionId = chainContext.SessionId;
+        bool skipFinancialChain = chainContext.SkipFinancialChain;
         string? registrationId = null;
         string? inquiryId = null;
         string? claimId = null;
@@ -826,159 +1287,242 @@ internal static class ComprehensiveRelationalIngest
         }
         else await Console.Error.WriteLineAsync("→ skip financial chain (--skip-financial).").ConfigureAwait(false);
 
-        bool readModelDone = false;
-        if (!skipReadModelProjections)
+        return new FinancialChainIds(registrationId, inquiryId, claimId);
+    }
+
+    private async static Task<bool> RunReadModelAndDeliveryIfEnabledAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        ReadModelDeliveryContext deliveryContext,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(deliveryContext);
+        if (deliveryContext.SkipReadModelProjections)
         {
-            if (!skipProjectionRebuild)
-                await RunStepAsync(
-                        "read-model: rebuild projections",
-                        async () =>
-                        {
-                            HttpResponseMessage r = await GatewayHttp.SendPostWithoutBodyAsync(
-                                    client,
-                                    GatewayApiPaths.ProjectionsRebuild(v),
-                                    g.TraceHttp,
-                                    cancellationToken)
-                                .ConfigureAwait(false);
-                            string text = await r.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                            if (!r.IsSuccessStatusCode)
-                            {
-                                await Console.Error.WriteLineAsync($"HTTP {(int)r.StatusCode}: {text}").ConfigureAwait(false);
-                                throw new InvalidOperationException("projections rebuild failed.");
-                            }
-
-                            _ = JsonSerializer.Deserialize<RebuildProjectionsResponseDto>(text, GatewayHttp.JsonReadOptions);
-                        },
-                        cancellationToken)
-                    .ConfigureAwait(false);
-            else await Console.Error.WriteLineAsync("→ skip projections/rebuild (--skip-projection-rebuild).").ConfigureAwait(false);
-
-            await Console.Error.WriteLineAsync("→ parallel: delivery broadcasts + read-model projections…").ConfigureAwait(false);
-            try
-            {
-                HttpResponseMessage[] responses = await Task.WhenAll(
-                        GatewayHttp.PostJsonAsync(
-                            client,
-                            GatewayApiPaths.DeliveryBroadcastSession(v),
-                            new
-                            {
-                                treatmentSessionId = sessionId,
-                                eventType = "Simulation.RelationalIngest",
-                                summary = "Session feed: comprehensive ingest completed",
-                                occurredAtUtc = DateTimeOffset.UtcNow,
-                            },
-                            cancellationToken,
-                            g.TraceHttp),
-                        GatewayHttp.PostJsonAsync(
-                            client,
-                            GatewayApiPaths.DeliveryBroadcastAlert(v),
-                            new
-                            {
-                                eventType = "Simulation.RelationalIngest",
-                                treatmentSessionId = sessionId,
-                                alertId = alertRowKey,
-                                severity = "High",
-                                lifecycleState = "Active",
-                                occurredAtUtc = DateTimeOffset.UtcNow,
-                            },
-                            cancellationToken,
-                            g.TraceHttp),
-                        GatewayHttp.PostJsonAsync(
-                            client,
-                            GatewayApiPaths.ProjectionsAlerts(v),
-                            new
-                            {
-                                alertRowKey,
-                                alertType = "Simulation.RelationalIngest",
-                                severity = "High",
-                                alertState = "Active",
-                                treatmentSessionId = sessionId,
-                                raisedAtUtc = DateTimeOffset.UtcNow,
-                            },
-                            cancellationToken,
-                            g.TraceHttp),
-                        GatewayHttp.PostJsonAsync(
-                            client,
-                            GatewayApiPaths.ProjectionsSessionOverview(v),
-                            new
-                            {
-                                treatmentSessionId = sessionId,
-                                sessionState = "Active",
-                                patientDisplayLabel = mrn,
-                                linkedDeviceId = deviceIdentifier,
-                                sessionStartedAtUtc = DateTimeOffset.UtcNow,
-                            },
-                            cancellationToken,
-                            g.TraceHttp))
-                    .ConfigureAwait(false);
-
-                foreach (HttpResponseMessage r in responses)
-                    await GatewayHttp.WriteResultAsync(r, cancellationToken, writeSuccessBodyToStdout: false)
-                        .ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                await Console.Error.WriteLineAsync($"Step failed: delivery / projections — {ex.Message}").ConfigureAwait(false);
-                throw;
-            }
-
-            readModelDone = true;
-            await Console.Error.WriteLineAsync("  OK").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("→ skip read-model projection upserts (--skip-read-model).").ConfigureAwait(false);
+            return false;
         }
-        else await Console.Error.WriteLineAsync("→ skip read-model projection upserts (--skip-read-model).").ConfigureAwait(false);
 
-        string? factPrimary = auditPrimary?.PlatformAuditFactId;
+        await RebuildProjectionsIfRequestedAsync(
+                client,
+                v,
+                g,
+                deliveryContext.SkipProjectionRebuild,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await PostReadModelDeliveryAndProjectionUpsertsAsync(client, v, g, deliveryContext, cancellationToken)
+            .ConfigureAwait(false);
+
+        return true;
+    }
+
+    private async static Task RebuildProjectionsIfRequestedAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        bool skipProjectionRebuild,
+        CancellationToken cancellationToken)
+    {
+        if (skipProjectionRebuild)
+        {
+            await Console.Error.WriteLineAsync("→ skip projections/rebuild (--skip-projection-rebuild).").ConfigureAwait(false);
+            return;
+        }
+
+        await RunStepAsync(
+                "read-model: rebuild projections",
+                async () => await ExecuteSingleProjectionRebuildAsync(client, v, g, cancellationToken).ConfigureAwait(false),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async static Task ExecuteSingleProjectionRebuildAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        CancellationToken cancellationToken)
+    {
+        HttpResponseMessage r = await GatewayHttp.SendPostWithoutBodyAsync(
+                client,
+                GatewayApiPaths.ProjectionsRebuild(v),
+                g.TraceHttp,
+                cancellationToken)
+            .ConfigureAwait(false);
+        string text = await r.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!r.IsSuccessStatusCode)
+        {
+            await Console.Error.WriteLineAsync($"HTTP {(int)r.StatusCode}: {text}").ConfigureAwait(false);
+            throw new InvalidOperationException("projections rebuild failed.");
+        }
+
+        _ = JsonSerializer.Deserialize<RebuildProjectionsResponseDto>(text, GatewayHttp.JsonReadOptions);
+    }
+
+    private async static Task PostReadModelDeliveryAndProjectionUpsertsAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        ReadModelDeliveryContext d,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(d);
+        string sessionId = d.SessionId;
+        string alertRowKey = d.AlertRowKey;
+        string mrn = d.Mrn;
+        string deviceIdentifier = d.DeviceIdentifier;
+
+        await Console.Error.WriteLineAsync("→ parallel: delivery broadcasts + read-model projections…").ConfigureAwait(false);
+        try
+        {
+            HttpResponseMessage[] responses = await Task.WhenAll(
+                    GatewayHttp.PostJsonAsync(
+                        client,
+                        GatewayApiPaths.DeliveryBroadcastSession(v),
+                        new
+                        {
+                            treatmentSessionId = sessionId,
+                            eventType = "Simulation.RelationalIngest",
+                            summary = "Session feed: comprehensive ingest completed",
+                            occurredAtUtc = DateTimeOffset.UtcNow,
+                        },
+                        cancellationToken,
+                        g.TraceHttp),
+                    GatewayHttp.PostJsonAsync(
+                        client,
+                        GatewayApiPaths.DeliveryBroadcastAlert(v),
+                        new
+                        {
+                            eventType = "Simulation.RelationalIngest",
+                            treatmentSessionId = sessionId,
+                            alertId = alertRowKey,
+                            severity = "High",
+                            lifecycleState = "Active",
+                            occurredAtUtc = DateTimeOffset.UtcNow,
+                        },
+                        cancellationToken,
+                        g.TraceHttp),
+                    GatewayHttp.PostJsonAsync(
+                        client,
+                        GatewayApiPaths.ProjectionsAlerts(v),
+                        new
+                        {
+                            alertRowKey,
+                            alertType = "Simulation.RelationalIngest",
+                            severity = "High",
+                            alertState = "Active",
+                            treatmentSessionId = sessionId,
+                            raisedAtUtc = DateTimeOffset.UtcNow,
+                        },
+                        cancellationToken,
+                        g.TraceHttp),
+                    GatewayHttp.PostJsonAsync(
+                        client,
+                        GatewayApiPaths.ProjectionsSessionOverview(v),
+                        new
+                        {
+                            treatmentSessionId = sessionId,
+                            sessionState = "Active",
+                            patientDisplayLabel = mrn,
+                            linkedDeviceId = deviceIdentifier,
+                            sessionStartedAtUtc = DateTimeOffset.UtcNow,
+                        },
+                        cancellationToken,
+                        g.TraceHttp))
+                .ConfigureAwait(false);
+
+            foreach (HttpResponseMessage r in responses)
+                await GatewayHttp.WriteResultAsync(r, cancellationToken, writeSuccessBodyToStdout: false)
+                    .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync($"Step failed: delivery / projections — {ex.Message}").ConfigureAwait(false);
+            throw;
+        }
+
+        await Console.Error.WriteLineAsync("  OK").ConfigureAwait(false);
+    }
+
+    private async static Task<AuditProvenanceOutcome> RunAuditProvenanceFollowUpIfNeededAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        AuditProvenanceFollowUpContext followUpContext,
+        RecordPlatformAuditFactResponseDto auditPrimary,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(followUpContext);
+        string sessionId = followUpContext.SessionId;
+        string mrn = followUpContext.Mrn;
+        string alertRowKey = followUpContext.AlertRowKey;
+        string? factPrimary = auditPrimary.PlatformAuditFactId;
         string? factSecondaryId = null;
         string? linkId = null;
-        if (factPrimary is { Length: > 0 })
+        switch (factPrimary)
         {
-            string auditDetailSecondary = JsonSerializer.Serialize(
-                new { treatmentSessionId = sessionId, phase = "post-read-model", alertRowKey },
-                GatewayHttp.JsonWriteOptions);
-            RecordPlatformAuditFactResponseDto secondary = await RunJsonStepAsync(
-                    "audit: second fact (provenance anchor)",
-                    GatewayHttp.PostJsonReadAsync<RecordPlatformAuditFactResponseDto>(
-                        client,
-                        GatewayApiPaths.AuditFacts(v),
-                        new
-                        {
-                            occurredAtUtc = DateTimeOffset.UtcNow,
-                            eventType = "Simulation.RelationalIngest.FollowUp",
-                            summary = "Second audit fact linked from the first for provenance drill-down",
-                            detailJson = auditDetailSecondary,
-                            correlationId = g.CorrelationId,
-                            causationId = factPrimary,
-                            actorId = (string?)null,
-                            sourceSystem = "Simulation.GatewayCli",
-                            relatedResourceType = "TreatmentSession",
-                            relatedResourceId = sessionId,
-                            sessionId,
-                            patientId = mrn,
-                        },
-                        cancellationToken,
-                        g.TraceHttp),
-                    cancellationToken)
-                .ConfigureAwait(false);
-            factSecondaryId = secondary.PlatformAuditFactId;
+            case { Length: > 0 }:
+            {
+                string auditDetailSecondary = JsonSerializer.Serialize(
+                    new { treatmentSessionId = sessionId, phase = "post-read-model", alertRowKey },
+                    GatewayHttp.JsonWriteOptions);
+                RecordPlatformAuditFactResponseDto secondary = await RunJsonStepAsync(
+                        "audit: second fact (provenance anchor)",
+                        GatewayHttp.PostJsonReadAsync<RecordPlatformAuditFactResponseDto>(
+                            client,
+                            GatewayApiPaths.AuditFacts(v),
+                            new
+                            {
+                                occurredAtUtc = DateTimeOffset.UtcNow,
+                                eventType = "Simulation.RelationalIngest.FollowUp",
+                                summary = "Second audit fact linked from the first for provenance drill-down",
+                                detailJson = auditDetailSecondary,
+                                correlationId = g.CorrelationId,
+                                causationId = factPrimary,
+                                actorId = (string?)null,
+                                sourceSystem = "Simulation.GatewayCli",
+                                relatedResourceType = "TreatmentSession",
+                                relatedResourceId = sessionId,
+                                sessionId,
+                                patientId = mrn,
+                            },
+                            cancellationToken,
+                            g.TraceHttp),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                factSecondaryId = secondary.PlatformAuditFactId;
 
-            RecordProvenanceLinkResponseDto link = await RunJsonStepAsync(
-                    "audit: provenance link",
-                    GatewayHttp.PostJsonReadAsync<RecordProvenanceLinkResponseDto>(
-                        client,
-                        GatewayApiPaths.AuditProvenanceLinks(v),
-                        new
-                        {
-                            fromPlatformAuditFactId = factSecondaryId,
-                            toPlatformAuditFactId = factPrimary,
-                            relationType = ProvenanceRelationWasDerivedFrom,
-                        },
-                        cancellationToken,
-                        g.TraceHttp),
-                    cancellationToken)
-                .ConfigureAwait(false);
-            linkId = link.ProvenanceLinkId;
+                RecordProvenanceLinkResponseDto link = await RunJsonStepAsync(
+                        "audit: provenance link",
+                        GatewayHttp.PostJsonReadAsync<RecordProvenanceLinkResponseDto>(
+                            client,
+                            GatewayApiPaths.AuditProvenanceLinks(v),
+                            new
+                            {
+                                fromPlatformAuditFactId = factSecondaryId,
+                                toPlatformAuditFactId = factPrimary,
+                                relationType = ProvenanceRelationWasDerivedFrom,
+                            },
+                            cancellationToken,
+                            g.TraceHttp),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                linkId = link.ProvenanceLinkId;
+                break;
+            }
         }
 
+        return new AuditProvenanceOutcome(factPrimary, factSecondaryId, linkId);
+    }
+
+    private async static Task RunReplayRecoverySequenceIfEnabledAsync(
+        HttpClient client,
+        string v,
+        GlobalOptions g,
+        bool skipReplayRecovery,
+        CancellationToken cancellationToken)
+    {
         if (!skipReplayRecovery)
         {
             _ = await RunJsonStepAsync(
@@ -1092,45 +1636,6 @@ internal static class ComprehensiveRelationalIngest
                 .ConfigureAwait(false);
         }
         else await Console.Error.WriteLineAsync("→ skip replay-recovery (--skip-replay-recovery).").ConfigureAwait(false);
-
-        await RunStepAsync(
-                "session: complete",
-                async () =>
-                {
-                    HttpResponseMessage r = await GatewayHttp.SendPostWithoutBodyAsync(
-                            client,
-                            GatewayApiPaths.SessionComplete(v, sessionId),
-                            g.TraceHttp,
-                            cancellationToken)
-                        .ConfigureAwait(false);
-                    await GatewayHttp.WriteResultAsync(r, cancellationToken, writeSuccessBodyToStdout: false)
-                        .ConfigureAwait(false);
-                },
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        return new Summary(
-            deviceIdentifier,
-            mrn,
-            sessionId,
-            threshold.ProfileId,
-            ruleSetId,
-            midMap,
-            midHr,
-            surveillanceRaise!.AlertId,
-            ruleEval!.AlertId,
-            workflow!.WorkflowInstanceId,
-            analysis!.AnalysisId,
-            reportId,
-            registrationId,
-            inquiryId,
-            claimId,
-            factPrimary,
-            factSecondaryId,
-            linkId,
-            alertRowKey,
-            readModelDone,
-            !skipFinancialChain);
     }
 
     private readonly record struct MeasurementDerivationWork(
@@ -1140,7 +1645,7 @@ internal static class ComprehensiveRelationalIngest
         string ChannelId,
         double? PreviousSampleValue);
 
-    private static async Task<string> RunMeasurementDerivationAsync(
+    private async static Task<string> RunMeasurementDerivationAsync(
         HttpClient client,
         string apiVersion,
         GlobalOptions g,
@@ -1176,7 +1681,7 @@ internal static class ComprehensiveRelationalIngest
         return pub.PublicationId;
     }
 
-    private static async Task PostNoContentAsync(
+    private async static Task PostNoContentAsync(
         HttpClient client,
         string relativePath,
         bool traceHttp,
@@ -1187,7 +1692,7 @@ internal static class ComprehensiveRelationalIngest
         await GatewayHttp.ExpectNoContentAsync(r, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<string> CreateTreatmentSessionAsync(
+    private async static Task<string> CreateTreatmentSessionAsync(
         HttpClient client,
         string apiVersion,
         GlobalOptions g,
@@ -1212,7 +1717,7 @@ internal static class ComprehensiveRelationalIngest
         return dto.SessionId;
     }
 
-    private static async Task RunStepAsync(string label, Func<Task> action, CancellationToken cancellationToken)
+    private async static Task RunStepAsync(string label, Func<Task> action, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         await Console.Error.WriteLineAsync($"→ {label}…").ConfigureAwait(false);
@@ -1229,7 +1734,7 @@ internal static class ComprehensiveRelationalIngest
         await Console.Error.WriteLineAsync("  OK").ConfigureAwait(false);
     }
 
-    private static async Task<T> RunJsonStepAsync<T>(string label, Task<T> task, CancellationToken cancellationToken)
+    private async static Task<T> RunJsonStepAsync<T>(string label, Task<T> task, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         await Console.Error.WriteLineAsync($"→ {label}…").ConfigureAwait(false);

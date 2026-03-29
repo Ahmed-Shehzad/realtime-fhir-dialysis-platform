@@ -4,4 +4,8 @@ public sealed record SessionFeedPayload(
     string EventType,
     string TreatmentSessionId,
     string Summary,
-    DateTimeOffset OccurredAtUtc);
+    DateTimeOffset OccurredAtUtc,
+    IReadOnlyDictionary<string, double>? VitalsByChannel = null,
+    string? PatientDisplayLabel = null,
+    string? SessionStateHint = null,
+    string? LinkedDeviceIdHint = null);

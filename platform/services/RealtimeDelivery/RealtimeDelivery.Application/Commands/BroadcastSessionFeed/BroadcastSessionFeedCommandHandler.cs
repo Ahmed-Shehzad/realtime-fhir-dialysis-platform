@@ -37,7 +37,15 @@ public sealed class BroadcastSessionFeedCommandHandler : ICommandHandler<Broadca
         string sessionId = command.TreatmentSessionId.Trim();
         string eventType = command.EventType.Trim();
         string summary = command.Summary.Trim();
-        var payload = new SessionFeedPayload(eventType, sessionId, summary, command.OccurredAtUtc);
+        var payload = new SessionFeedPayload(
+            eventType,
+            sessionId,
+            summary,
+            command.OccurredAtUtc,
+            command.VitalsByChannel,
+            command.PatientDisplayLabel,
+            command.SessionStateHint,
+            command.LinkedDeviceIdHint);
 
         await _gateway
             .PushSessionAsync(_tenant.TenantId, sessionId, payload, cancellationToken)

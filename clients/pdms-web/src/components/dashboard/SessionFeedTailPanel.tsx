@@ -37,8 +37,14 @@ export function SessionFeedTailPanel(props: SessionFeedTailPanelProps): ReactEle
       </p>
       {feedQuery.data.length === 0 ? (
         <p className="mt-4 text-sm text-slate-500">
-          No session events yet. Run <code className="rounded bg-slate-100 px-1">simulate-gateway</code> (same tenant) or{' '}
-          <code className="rounded bg-slate-100 px-1">broadcast session</code> for this session id.
+          No session events yet. Use the <span className="font-mono text-xs">treatmentSessionId</span> from the latest
+          simulate-gateway JSON (ingest must succeed). Match <code className="rounded bg-slate-100 px-1">X-Tenant-Id</code>:
+          set <code className="rounded bg-slate-100 px-1">VITE_APP_TENANT_ID</code> to the same value as{' '}
+          <code className="rounded bg-slate-100 px-1">SIMULATION_GATEWAY_TENANT</code>, or omit both for{' '}
+          <span className="font-mono text-xs">default</span>. With{' '}
+          <code className="rounded bg-slate-100 px-1">SIMULATION_VITALS_STREAM_INTERVAL_MS</code>, session feed ticks keep
+          arriving until you stop the simulator (Ctrl+C). Check the browser console if{' '}
+          <code className="rounded bg-slate-100 px-1">JoinSessionFeed</code> failed.
         </p>
       ) : (
         <ul className="mt-4 max-h-48 space-y-2 overflow-auto text-sm">

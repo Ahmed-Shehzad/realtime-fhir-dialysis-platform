@@ -223,7 +223,7 @@ IResourceBuilder<ProjectResource> administrationConfiguration =
         .WithAspireReadinessProbe();
 
 // Override YARP cluster addresses to in-mesh host names with explicit Kestrel ports (http://host/ implies 80).
-_ = builder.AddProject<Projects.RealtimePlatform_ApiGateway>(
+IResourceBuilder<ProjectResource> apiGateway = builder.AddProject<Projects.RealtimePlatform_ApiGateway>(
         "api-gateway",
         ConfigureProjectForExplicitAspireHttp)
     .WithReference(deviceRegistry)
@@ -314,5 +314,16 @@ _ = builder.AddProject<Projects.RealtimePlatform_ApiGateway>(
     .WaitFor(replayRecovery)
     .WaitFor(administrationConfiguration)
     .WithAspireReadinessProbe();
+
+// Gateway CLI: full ingest then vitals/sessionFeed/alert live loop (stops with Ctrl+C in dashboard).
+_ = builder.AddProject<Projects.Simulation_GatewayCli>("simulate-gateway")
+    .WaitFor(apiGateway)
+    .WithEnvironment("SIMULATION_GATEWAY_BASE", apiGateway.GetEndpoint("http"))
+    .WithEnvironment("SIMULATION_GATEWAY_TENANT", "default")
+    .WithEnvironment("SIMULATION_CONTINUOUS_LIVE_STREAM", "1");
+
+// pdms-web Vite dev server (AddViteApp already adds the "http" endpoint and sets PORT for Vite; do not call WithHttpEndpoint again).
+// Open the pdms-web endpoint from the Aspire dashboard (port may be dynamic). Proxies in vite.config.ts target localhost:5100 (api-gateway).
+_ = builder.AddViteApp("pdms-web", "../../clients/pdms-web").WaitFor(apiGateway);
 
 await builder.Build().RunAsync().ConfigureAwait(false);

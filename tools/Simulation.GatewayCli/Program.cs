@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace Simulation.GatewayCli;
@@ -87,6 +88,47 @@ internal static class Program
                     cancellationToken)
                 .ConfigureAwait(false);
         Console.WriteLine(JsonSerializer.Serialize(summary, GatewayHttp.JsonWriteOptions));
+
+        int vitalsStreamMs = ReadVitalsStreamIntervalMilliseconds();
+        if (vitalsStreamMs > 0)
+        {
+            Uri streamBase = GatewayHttp.NormalizeGatewayBase(g.GatewayBase);
+            using HttpClient streamClient = GatewayHttp.CreateClient(
+                streamBase,
+                g.TenantId,
+                g.BearerToken,
+                g.CorrelationId,
+                g.HttpClientTimeout);
+            await ComprehensiveRelationalIngest.StreamVitalsTrendLoopAsync(
+                    streamClient,
+                    g.ApiVersion,
+                    g,
+                    summary,
+                    TimeSpan.FromMilliseconds(vitalsStreamMs),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return 0;
+    }
+
+    private static int ReadVitalsStreamIntervalMilliseconds()
+    {
+        string? env = Environment.GetEnvironmentVariable("SIMULATION_VITALS_STREAM_INTERVAL_MS");
+        if (!string.IsNullOrWhiteSpace(env))
+        {
+            if (int.TryParse(
+                    env.Trim(),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out int ms)
+                && ms > 0) return ms;
+
+            return 0;
+        }
+
+        if (GlobalOptions.IsTruthyEnvironmentVariable("SIMULATION_CONTINUOUS_LIVE_STREAM")) return 2000;
+
         return 0;
     }
 

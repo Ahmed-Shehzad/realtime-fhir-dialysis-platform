@@ -8,4 +8,8 @@ public sealed record BroadcastSessionFeedCommand(
     string EventType,
     string Summary,
     DateTimeOffset OccurredAtUtc,
-    string? AuthenticatedUserId = null) : ICommand;
+    string? AuthenticatedUserId = null,
+    IReadOnlyDictionary<string, double>? VitalsByChannel = null,
+    string? PatientDisplayLabel = null,
+    string? SessionStateHint = null,
+    string? LinkedDeviceIdHint = null) : ICommand;

@@ -6,7 +6,8 @@
       "dotnetRunMessages": true,
       "environmentVariables": {
         "SIMULATION_GATEWAY_TENANT": "default",
-        "SIMULATION_SCENARIO_PREFIX": "rider"
+        "SIMULATION_SCENARIO_PREFIX": "rider",
+        "SIMULATION_VITALS_STREAM_INTERVAL_MS": "2000"
       }
     }
   }

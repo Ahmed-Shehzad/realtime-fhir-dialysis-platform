@@ -34,6 +34,8 @@ type VitalsTrendChartProps = {
   series: readonly VitalSeriesDefinition[]
   title?: string
   subtitle?: string
+  /** When true and the latest sample time advances, reset pan/zoom so streaming points stay visible. */
+  resetZoomWhenTimeExtentGrows?: boolean
 }
 
 const plotHeightPx = 360
@@ -85,12 +87,24 @@ function buildAriaSummary(series: readonly VitalSeriesDefinition[]): string {
   return `Vitals trend. ${parts.join('. ')}.`
 }
 
-export function VitalsTrendChart({ series, title, subtitle }: VitalsTrendChartProps): ReactElement {
+export function VitalsTrendChart({
+  series,
+  title,
+  subtitle,
+  resetZoomWhenTimeExtentGrows = false,
+}: VitalsTrendChartProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const transformRef = useRef(d3.zoomIdentity)
+  const lastTimeExtentMaxRef = useRef<number | null>(null)
   const rafRef = useRef<number | undefined>(undefined)
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set())
+
+  useEffect(() => {
+    if (!resetZoomWhenTimeExtentGrows) {
+      lastTimeExtentMaxRef.current = null
+    }
+  }, [resetZoomWhenTimeExtentGrows])
 
   const visibleSeries = useMemo(
     () => series.filter((s) => s.points.length > 0 && !hiddenIds.has(s.id)),
@@ -122,6 +136,18 @@ export function VitalsTrendChart({ series, title, subtitle }: VitalsTrendChartPr
 
     const drawChart = () => {
       d3.select(container).selectAll('.vitals-hover-tooltip').remove()
+
+      if (visibleSeries.length > 0 && resetZoomWhenTimeExtentGrows) {
+        const times = visibleSeries.flatMap((s) => s.points.map((p) => p.t.getTime()))
+        if (times.length > 0) {
+          const maxT = Math.max(...times)
+          const prevMax = lastTimeExtentMaxRef.current
+          if (prevMax !== null && maxT > prevMax) {
+            transformRef.current = d3.zoomIdentity
+          }
+          lastTimeExtentMaxRef.current = maxT
+        }
+      }
 
       const width = container.clientWidth || 640
       const distinctUnits = new Set(visibleSeries.map((s) => s.unit))
@@ -409,7 +435,7 @@ export function VitalsTrendChart({ series, title, subtitle }: VitalsTrendChartPr
       d3.select(container).selectAll('.vitals-hover-tooltip').remove()
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current)
     }
-  }, [visibleSeries, ariaLabel, title])
+  }, [visibleSeries, ariaLabel, title, resetZoomWhenTimeExtentGrows])
 
   return (
     <div ref={containerRef} className="w-full space-y-3">

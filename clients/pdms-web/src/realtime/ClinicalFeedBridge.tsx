@@ -6,12 +6,17 @@ import { getHttpAccessToken } from '../api/httpClient'
 import { useSession } from '../auth/useSession'
 import { realtimeFeedRoles } from '../auth/rolePolicies'
 import { isGatewayClientConfigured, runtimeConfig } from '../config/runtimeConfig'
+import { normalizeTreatmentSessionId } from '../lib/normalizeTreatmentSessionId'
 import { queryKeys } from '../lib/queryKeys'
 import { type AlertFeedPayload, type SessionFeedPayload } from '../types/clinicalFeed'
+import { coerceSessionFeedPayload } from './coerceSessionFeedPayload'
+import {
+  SESSION_FEED_TAIL_MAX_ITEMS,
+  writeSessionFeedTailToStorage,
+} from './sessionFeedTailStorage'
 import { type SessionOverviewReadDto } from '../types/sessionOverview'
 import { useRealtimeHubConnectionState } from './RealtimeHubContext'
 
-const SESSION_FEED_TAIL_MAX = 20
 const TENANT_ALERTS_FEED_MAX = 50
 
 function clinicalFeedHubUrl(): string {
@@ -35,7 +40,7 @@ export function ClinicalFeedBridge(): ReactElement | null {
   const { setConnectionState } = useRealtimeHubConnectionState()
   const [searchParams] = useSearchParams()
   const { roles } = useSession()
-  const sessionIdFromUrl = searchParams.get('sessionId')?.trim() ?? ''
+  const sessionIdFromUrl = normalizeTreatmentSessionId(searchParams.get('sessionId'))
 
   const feedOptsRef = useRef({
     sessionId: '',
@@ -73,25 +78,61 @@ export function ClinicalFeedBridge(): ReactElement | null {
       .withAutomaticReconnect()
       .build()
 
-    const onSessionFeed = (payload: SessionFeedPayload) => {
-      const sid = payload.treatmentSessionId?.trim() ?? ''
+    const onSessionFeed = (raw: unknown) => {
+      const payload = coerceSessionFeedPayload(raw)
+      if (!payload) {
+        return
+      }
+
+      const sid = normalizeTreatmentSessionId(payload.treatmentSessionId)
       if (!sid) {
         return
       }
 
+      const hasNonEmpty = (value: string | null | undefined) =>
+        value != null && value.trim().length > 0
+
+      const hasPatientPreview =
+        hasNonEmpty(payload.patientDisplayLabel) ||
+        hasNonEmpty(payload.sessionStateHint) ||
+        hasNonEmpty(payload.linkedDeviceIdHint)
+
       queryClient.setQueryData<SessionOverviewReadDto>(queryKeys.sessionOverview(sid), (prev) => {
-        if (!prev || prev.treatmentSessionId !== sid) {
+        if (!prev) {
+          if (!hasPatientPreview) {
+            return prev
+          }
+          return {
+            id: sid,
+            treatmentSessionId: sid,
+            sessionState: hasNonEmpty(payload.sessionStateHint) ? payload.sessionStateHint!.trim() : 'Active',
+            patientDisplayLabel: hasNonEmpty(payload.patientDisplayLabel) ? payload.patientDisplayLabel!.trim() : null,
+            linkedDeviceId: hasNonEmpty(payload.linkedDeviceIdHint) ? payload.linkedDeviceIdHint!.trim() : null,
+            sessionStartedAtUtc: payload.occurredAtUtc,
+            projectionUpdatedAtUtc: payload.occurredAtUtc,
+          }
+        }
+        if (prev.treatmentSessionId !== sid) {
           return prev
         }
         return {
           ...prev,
           projectionUpdatedAtUtc: payload.occurredAtUtc,
+          ...(hasNonEmpty(payload.patientDisplayLabel)
+            ? { patientDisplayLabel: payload.patientDisplayLabel!.trim() }
+            : {}),
+          ...(hasNonEmpty(payload.sessionStateHint) ? { sessionState: payload.sessionStateHint!.trim() } : {}),
+          ...(hasNonEmpty(payload.linkedDeviceIdHint)
+            ? { linkedDeviceId: payload.linkedDeviceIdHint!.trim() }
+            : {}),
         }
       })
 
       queryClient.setQueryData<SessionFeedPayload[]>(queryKeys.sessionFeedTail(sid), (prev) => {
         const list = prev ?? []
-        return [...list, payload].slice(-SESSION_FEED_TAIL_MAX)
+        const next = [...list, payload].slice(-SESSION_FEED_TAIL_MAX_ITEMS)
+        writeSessionFeedTailToStorage(sid, next)
+        return next
       })
     }
 
@@ -111,10 +152,18 @@ export function ClinicalFeedBridge(): ReactElement | null {
         return
       }
       if (opts.joinTenantAlerts) {
-        await connection.invoke('JoinTenantAlerts')
+        try {
+          await connection.invoke('JoinTenantAlerts')
+        } catch (err) {
+          console.warn('ClinicalFeedBridge: JoinTenantAlerts failed', err)
+        }
       }
       if (opts.sessionId.length > 0) {
-        await connection.invoke('JoinSessionFeed', opts.sessionId)
+        try {
+          await connection.invoke('JoinSessionFeed', opts.sessionId)
+        } catch (err) {
+          console.warn('ClinicalFeedBridge: JoinSessionFeed failed', err)
+        }
       }
     }
 

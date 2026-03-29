@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Asp.Versioning;
 
 using BuildingBlocks;
@@ -28,7 +30,13 @@ _ = builder.Services.AddDialysisPlatformC5WebApi(builder.Configuration);
 _ = builder.Services.AddSingleton<IAuditEventStore, InMemoryAuditEventStore>();
 _ = builder.Services.AddScoped<IAuditRecorder, FhirAuditRecorder>();
 _ = builder.Services.AddRealtimePlatformRedis(builder.Configuration);
-_ = builder.Services.AddSignalR();
+_ = builder.Services
+    .AddSignalR()
+    .AddJsonProtocol(o =>
+    {
+        o.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        o.PayloadSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 _ = builder.Services.AddScoped<IRealtimeFeedGateway, SignalRRealtimeFeedGateway>();
 
 _ = builder.Services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
